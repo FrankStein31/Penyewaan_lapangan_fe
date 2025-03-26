@@ -1,20 +1,17 @@
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-
-const theme = createTheme({
-    palette: {
-        primary: {
-        main: '#1976d2',
-        },
-    },
-});
+import { AuthProvider } from '@/context/AuthContext'
+import UserLayout from '@/layouts/UserLayout'
+import themeConfig from '@/configs/themeConfig'
+import ThemeComponent from '@/theme/ThemeComponent'
 
 function MyApp({ Component, pageProps }) {
     return (
-        <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Component {...pageProps} />
-        </ThemeProvider>
+        <ThemeComponent settings={themeConfig}>
+            <AuthProvider>
+                <UserLayout>
+                    <Component {...pageProps} />
+                </UserLayout>
+            </AuthProvider>
+        </ThemeComponent>
     );
 }
 
