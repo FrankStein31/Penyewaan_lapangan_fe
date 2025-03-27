@@ -18,7 +18,7 @@
     "eslint": "^8",
     "eslint-config-next": "^13.4.19",
     "postcss": "^8.5.3",
-    "tailwindcss": "^3.3.5"
+    "tailwindcss": "^3.4.17"
   },
   "description": "A landing page project built with Next.js, React, and Tailwind CSS.",
   "main": "index.js",
