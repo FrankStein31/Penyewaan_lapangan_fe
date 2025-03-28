@@ -30,6 +30,20 @@ export function AuthProvider({ children }) {
                 }
             } catch (error) {
                 console.error('Not authenticated:', error);
+                // Jika 401, hapus data sesi di localStorage jika ada
+                if (error.response && error.response.status === 401) {
+                    localStorage.removeItem('user');
+                    
+                    // Redirect manual ke halaman utama jika bukan di halaman publik
+                    if (typeof window !== 'undefined') {
+                        const publicPaths = ['/', '/login', '/register'];
+                        const currentPath = window.location.pathname;
+                        
+                        if (!publicPaths.includes(currentPath)) {
+                            router.push('/');
+                        }
+                    }
+                }
                 setUser(null);
                 setIsAuthenticated(false);
             } finally {
@@ -40,15 +54,18 @@ export function AuthProvider({ children }) {
 
         // Cek jika URL saat ini adalah login atau register, jangan lakukan pemeriksaan otomatis
         if (typeof window !== 'undefined') {
+            const publicPaths = ['/', '/login', '/register'];
             const currentPath = window.location.pathname;
-            if (currentPath === '/login' || currentPath === '/register') {
+            
+            if (publicPaths.includes(currentPath)) {
                 setLoading(false);
                 setAuthChecked(true);
                 return;
             }
+            
             checkAuth();
         }
-    }, [authChecked]);
+    }, [authChecked, router]);
 
     // Fungsi untuk login
     const login = async (email, password) => {
