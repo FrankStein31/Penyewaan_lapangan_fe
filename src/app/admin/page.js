@@ -5,7 +5,6 @@ import {
     Box, 
     Card, 
     CardContent, 
-    Grid, 
     Typography, 
     Toolbar,
     Paper,
@@ -91,204 +90,214 @@ export default function AdminDashboard() {
             <Topbar />
             <Toolbar />
             <Box sx={{ p: 3 }}>
-            <Typography variant="h5" sx={{ fontWeight: 600, mb: 3 }}>
+            <Typography variant="h5" component="div" sx={{ fontWeight: 600, mb: 3 }}>
                 Dashboard
             </Typography>
             
-            <Grid container spacing={3}>
-                {stats.map(stat => (
-                <Grid item xs={12} sm={6} md={3} key={stat.title}>
-                    <Card elevation={0} sx={{ height: '100%' }}>
-                    <CardContent>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <Box>
-                            <Typography color="textSecondary" variant="body2" gutterBottom>
-                            {stat.title}
-                            </Typography>
-                            <Typography variant="h4" component="div" sx={{ fontWeight: 600 }}>
-                            {stat.value}
-                            </Typography>
-                        </Box>
-                        <Avatar
-                            sx={{
-                            backgroundColor: stat.bgColor,
-                            color: stat.color,
-                            width: 42,
-                            height: 42
-                            }}
-                        >
-                            {stat.icon}
-                        </Avatar>
-                        </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
-                        <ArrowUpwardIcon fontSize="small" sx={{ color: '#28c76f', mr: 0.5 }} />
-                        <Typography variant="body2" sx={{ color: '#28c76f' }}>
-                            {stat.change}
-                        </Typography>
-                        <Typography variant="body2" color="textSecondary" sx={{ ml: 1 }}>
-                            Dibanding bulan lalu
-                        </Typography>
-                        </Box>
-                    </CardContent>
-                    </Card>
-                </Grid>
-                ))}
-                
-                <Grid item xs={12} md={8}>
-                <Card elevation={0} sx={{ height: '100%' }}>
-                    <CardContent>
-                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-                        Analisis Booking
-                    </Typography>
-                    
-                    <Box sx={{ mt: 3 }}>
-                        {bookingData.map(item => (
-                        <Box key={item.name} sx={{ mb: 2 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                            <Typography variant="body2">{item.name}</Typography>
-                            <Typography variant="body2">{item.value}%</Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                {/* Stats Cards */}
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, width: '100%', mb: 3 }}>
+                    {stats.map(stat => (
+                    <Box key={stat.title} sx={{ flexGrow: 1, flexBasis: { xs: '100%', sm: 'calc(50% - 24px)', md: 'calc(25% - 24px)' } }}>
+                        <Card elevation={0} sx={{ height: '100%' }}>
+                        <CardContent>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <Box>
+                                <Typography component="div" color="textSecondary" variant="body2" gutterBottom>
+                                {stat.title}
+                                </Typography>
+                                <Typography variant="h4" component="div" sx={{ fontWeight: 600 }}>
+                                {stat.value}
+                                </Typography>
                             </Box>
-                            <LinearProgress 
-                            variant="determinate" 
-                            value={item.value} 
-                            sx={{ 
-                                height: 8, 
-                                borderRadius: 5,
-                                backgroundColor: '#f0f0f0',
-                                '& .MuiLinearProgress-bar': {
-                                backgroundColor: item.color,
-                                }
-                            }} 
-                            />
-                        </Box>
-                        ))}
+                            <Avatar
+                                sx={{
+                                backgroundColor: stat.bgColor,
+                                color: stat.color,
+                                width: 42,
+                                height: 42
+                                }}
+                            >
+                                {stat.icon}
+                            </Avatar>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
+                            <ArrowUpwardIcon fontSize="small" sx={{ color: '#28c76f', mr: 0.5 }} />
+                            <Typography component="span" variant="body2" sx={{ color: '#28c76f' }}>
+                                {stat.change}
+                            </Typography>
+                            <Typography component="span" variant="body2" color="textSecondary" sx={{ ml: 1 }}>
+                                Dibanding bulan lalu
+                            </Typography>
+                            </Box>
+                        </CardContent>
+                        </Card>
                     </Box>
-                    
-                    <Box sx={{ mt: 3 }}>
-                        <Typography variant="body2" color="textSecondary">
-                        * Data ini berdasarkan total booking dalam 30 hari terakhir
-                        </Typography>
-                    </Box>
-                    </CardContent>
-                </Card>
-                </Grid>
+                    ))}
+                </Box>
                 
-                <Grid item xs={12} md={4}>
-                <Card elevation={0} sx={{ height: '100%' }}>
-                    <CardContent>
-                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-                        Kalender
-                    </Typography>
-                    
-                    <Box sx={{ 
-                        p: 2,
-                        bgcolor: 'primary.main',
-                        color: 'white',
-                        borderRadius: 2,
-                        textAlign: 'center',
-                        mb: 2,
-                        mt: 1
-                    }}>
-                        <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
-                        24
-                        </Typography>
-                        <Typography variant="body1">
-                        Maret 2023
-                        </Typography>
+                {/* Main Content */}
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, width: '100%' }}>
+                    {/* Left Column */}
+                    <Box sx={{ flexGrow: 1, flexBasis: { xs: '100%', md: 'calc(66.666% - 12px)' } }}>
+                        <Card elevation={0} sx={{ height: '100%' }}>
+                            <CardContent>
+                            <Typography variant="h6" component="div" gutterBottom sx={{ fontWeight: 600 }}>
+                                Analisis Booking
+                            </Typography>
+                            
+                            <Box sx={{ mt: 3 }}>
+                                {bookingData.map(item => (
+                                <Box key={item.name} sx={{ mb: 2 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                    <Typography component="span" variant="body2">{item.name}</Typography>
+                                    <Typography component="span" variant="body2">{item.value}%</Typography>
+                                    </Box>
+                                    <LinearProgress 
+                                    variant="determinate" 
+                                    value={item.value} 
+                                    sx={{ 
+                                        height: 8, 
+                                        borderRadius: 5,
+                                        backgroundColor: '#f0f0f0',
+                                        '& .MuiLinearProgress-bar': {
+                                        backgroundColor: item.color,
+                                        }
+                                    }} 
+                                    />
+                                </Box>
+                                ))}
+                            </Box>
+                            
+                            <Box sx={{ mt: 3 }}>
+                                <Typography component="div" variant="body2" color="textSecondary">
+                                * Data ini berdasarkan total booking dalam 30 hari terakhir
+                                </Typography>
+                            </Box>
+                            </CardContent>
+                        </Card>
                     </Box>
                     
-                    <Typography variant="subtitle2" gutterBottom sx={{ mt: 3 }}>
-                        Hari ini ada 5 booking
-                    </Typography>
-                    
-                    <Box sx={{ p: 2, bgcolor: '#f8f8f8', borderRadius: 2, mt: 1 }}>
-                        <Typography variant="body2" gutterBottom>
-                        10:00 - 12:00
-                        </Typography>
-                        <Typography variant="subtitle2">
-                        Lapangan Basket (Tim Hoops)
-                        </Typography>
+                    {/* Right Column */}
+                    <Box sx={{ flexGrow: 1, flexBasis: { xs: '100%', md: 'calc(33.333% - 12px)' } }}>
+                        <Card elevation={0} sx={{ height: '100%' }}>
+                            <CardContent>
+                            <Typography variant="h6" component="div" gutterBottom sx={{ fontWeight: 600 }}>
+                                Kalender
+                            </Typography>
+                            
+                            <Box sx={{ 
+                                p: 2,
+                                bgcolor: 'primary.main',
+                                color: 'white',
+                                borderRadius: 2,
+                                textAlign: 'center',
+                                mb: 2,
+                                mt: 1
+                            }}>
+                                <Typography variant="h4" component="div" gutterBottom sx={{ fontWeight: 600 }}>
+                                24
+                                </Typography>
+                                <Typography variant="body1" component="div">
+                                Maret 2023
+                                </Typography>
+                            </Box>
+                            
+                            <Typography variant="subtitle2" component="div" gutterBottom sx={{ mt: 3 }}>
+                                Hari ini ada 5 booking
+                            </Typography>
+                            
+                            <Box sx={{ p: 2, bgcolor: '#f8f8f8', borderRadius: 2, mt: 1 }}>
+                                <Typography variant="body2" component="div" gutterBottom>
+                                10:00 - 12:00
+                                </Typography>
+                                <Typography variant="subtitle2" component="div">
+                                Lapangan Basket (Tim Hoops)
+                                </Typography>
+                            </Box>
+                            
+                            <Box sx={{ p: 2, bgcolor: '#f8f8f8', borderRadius: 2, mt: 1 }}>
+                                <Typography variant="body2" component="div" gutterBottom>
+                                15:00 - 17:00
+                                </Typography>
+                                <Typography variant="subtitle2" component="div">
+                                Lapangan Futsal (Bintang FC)
+                                </Typography>
+                            </Box>
+                            </CardContent>
+                        </Card>
                     </Box>
-                    
-                    <Box sx={{ p: 2, bgcolor: '#f8f8f8', borderRadius: 2, mt: 1 }}>
-                        <Typography variant="body2" gutterBottom>
-                        15:00 - 17:00
-                        </Typography>
-                        <Typography variant="subtitle2">
-                        Lapangan Futsal (Bintang FC)
-                        </Typography>
-                    </Box>
-                    </CardContent>
-                </Card>
-                </Grid>
+                </Box>
                 
-                <Grid item xs={12}>
-                <Card elevation={0}>
-                    <CardContent>
-                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-                        Booking Terbaru
-                    </Typography>
-                    
-                    <Box sx={{ mt: 2 }}>
-                        <List>
-                        {recentBookings.map((booking, index) => (
-                            <Box key={booking.id}>
-                            <ListItem sx={{ px: 0 }}>
-                                <ListItemAvatar>
-                                <Avatar sx={{ bgcolor: '#f0f0f0', color: '#7367f0' }}>
-                                    {booking.name.charAt(0)}
-                                </Avatar>
-                                </ListItemAvatar>
-                                <ListItemText
-                                primary={
-                                    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between' }}>
-                                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                                        {booking.name}
-                                    </Typography>
-                                    <Box>
-                                        <Typography 
-                                        variant="body2" 
-                                        component="span" 
-                                        sx={{ 
-                                            px: 1.5,
-                                            py: 0.5,
-                                            borderRadius: 5,
-                                            fontSize: '0.75rem',
-                                            bgcolor: `${booking.statusColor}1a`,
-                                            color: booking.statusColor,
-                                            fontWeight: 600
-                                        }}
-                                        >
-                                        {booking.status}
+                {/* Bottom Section */}
+                <Box sx={{ width: '100%', mt: 3 }}>
+                    <Card elevation={0}>
+                        <CardContent>
+                        <Typography variant="h6" component="div" gutterBottom sx={{ fontWeight: 600 }}>
+                            Booking Terbaru
+                        </Typography>
+                        
+                        <Box sx={{ mt: 2 }}>
+                            <List>
+                            {recentBookings.map((booking, index) => (
+                                <Box key={booking.id}>
+                                <ListItem sx={{ px: 0 }}>
+                                    <ListItemAvatar>
+                                    <Avatar sx={{ bgcolor: '#f0f0f0', color: '#7367f0' }}>
+                                        {booking.name.charAt(0)}
+                                    </Avatar>
+                                    </ListItemAvatar>
+                                    <ListItemText
+                                    primary={
+                                        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between' }}>
+                                        <Typography variant="subtitle2" component="span" sx={{ fontWeight: 600 }}>
+                                            {booking.name}
                                         </Typography>
-                                    </Box>
-                                    </Box>
-                                }
-                                secondary={
-                                    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, mt: 0.5 }}>
-                                    <Typography variant="body2" color="textSecondary">
-                                        {booking.field} • {booking.time}
-                                    </Typography>
-                                    <Typography 
-                                        variant="body2" 
-                                        color="textSecondary" 
-                                        sx={{ ml: { xs: 0, sm: 2 } }}
-                                    >
-                                        {booking.date}
-                                    </Typography>
-                                    </Box>
-                                }
-                                />
-                            </ListItem>
-                            {index < recentBookings.length - 1 && <Divider variant="inset" component="li" />}
-                            </Box>
-                        ))}
-                        </List>
-                    </Box>
-                    </CardContent>
-                </Card>
-                </Grid>
-            </Grid>
+                                        <Box>
+                                            <Typography 
+                                            variant="body2" 
+                                            component="span" 
+                                            sx={{ 
+                                                px: 1.5,
+                                                py: 0.5,
+                                                borderRadius: 5,
+                                                fontSize: '0.75rem',
+                                                bgcolor: `${booking.statusColor}1a`,
+                                                color: booking.statusColor,
+                                                fontWeight: 600
+                                            }}
+                                            >
+                                            {booking.status}
+                                            </Typography>
+                                        </Box>
+                                        </Box>
+                                    }
+                                    secondary={
+                                        <Box component="span" sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, mt: 0.5 }}>
+                                        <Typography component="span" variant="body2" color="textSecondary">
+                                            {booking.field} • {booking.time}
+                                        </Typography>
+                                        <Typography 
+                                            component="span"
+                                            variant="body2" 
+                                            color="textSecondary" 
+                                            sx={{ ml: { xs: 0, sm: 2 } }}
+                                        >
+                                            {booking.date}
+                                        </Typography>
+                                        </Box>
+                                    }
+                                    />
+                                </ListItem>
+                                {index < recentBookings.length - 1 && <Divider variant="inset" component="li" />}
+                                </Box>
+                            ))}
+                            </List>
+                        </Box>
+                        </CardContent>
+                    </Card>
+                </Box>
+            </Box>
             </Box>
         </Box>
         </>
