@@ -12,7 +12,8 @@ import {
     Toolbar,
     Divider,
     Typography,
-    Avatar
+    Avatar,
+    Collapse
 } from '@mui/material'
 import DashboardIcon from '@mui/icons-material/Dashboard'
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
@@ -21,6 +22,14 @@ import PeopleIcon from '@mui/icons-material/People'
 import ReceiptIcon from '@mui/icons-material/Receipt'
 import SettingsIcon from '@mui/icons-material/Settings'
 import LogoutIcon from '@mui/icons-material/Logout'
+import CategoryIcon from '@mui/icons-material/Category'
+import AccessTimeIcon from '@mui/icons-material/AccessTime'
+import MeetingRoomIcon from '@mui/icons-material/MeetingRoom'
+import EventAvailableIcon from '@mui/icons-material/EventAvailable'
+import PaymentIcon from '@mui/icons-material/Payment'
+import ExpandLess from '@mui/icons-material/ExpandLess'
+import ExpandMore from '@mui/icons-material/ExpandMore'
+import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -30,13 +39,21 @@ const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/admin' },
     { text: 'Booking', icon: <CalendarMonthIcon />, path: '/admin/booking' },
     { text: 'Lapangan', icon: <SportsIcon />, path: '/admin/lapangan' },
+    { text: 'Kategori Lapangan', icon: <CategoryIcon />, path: '/admin/kategori' },
     { text: 'Pelanggan', icon: <PeopleIcon />, path: '/admin/pelanggan' },
-    { text: 'Transaksi', icon: <ReceiptIcon />, path: '/admin/transaksi' },
-    { text: 'Pengaturan', icon: <SettingsIcon />, path: '/admin/pengaturan' },
+    { text: 'Pembayaran', icon: <PaymentIcon />, path: '/admin/pembayaran' },
+    { text: 'Jadwal & Sesi', icon: <AccessTimeIcon />, path: '/admin/jadwal' },
+    { text: 'Fasilitas', icon: <MeetingRoomIcon />, path: '/admin/fasilitas' },
+    { text: 'Status Lapangan', icon: <EventAvailableIcon />, path: '/admin/status' },
 ]
 
 export default function Sidebar() {
     const pathname = usePathname()
+    const { logout } = useAuth()
+    
+    const handleLogout = async () => {
+        await logout()
+    }
     
     return (
         <Drawer
@@ -112,6 +129,7 @@ export default function Sidebar() {
             <List sx={{ px: 2, py: 1 }}>
             <ListItem disablePadding sx={{ mb: 1 }}>
                 <ListItemButton 
+                onClick={handleLogout}
                 sx={{ 
                     borderRadius: '8px',
                     '&:hover': {

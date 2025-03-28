@@ -1,292 +1,398 @@
 import axios from 'axios';
 
-const BACKEND_URL = 'http://localhost:8000';
-const API_URL = `${BACKEND_URL}/api`;
+// Dapatkan URL API dari environment variable
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
-// Membuat instance axios dengan konfigurasi dasar
-const api = axios.create({
+// Setup axios dengan default config
+const axiosInstance = axios.create({
     baseURL: API_URL,
+    withCredentials: true, // Penting untuk cookie auth
     headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
-    },
-    withCredentials: true, // Penting untuk CSRF protection dan cookies
+        'Accept': 'application/json'
+    }
 });
 
-// Interceptor untuk menangani error
-api.interceptors.response.use(
+// Menambahkan interceptor untuk menangani error 401
+axiosInstance.interceptors.response.use(
     (response) => response,
-    async (error) => {
-        // Log semua error untuk debugging
-        console.error('API Error:', error.response || error);
-        
-        // Jika error karena unauthenticated (401) dan bukan karena request login
-        if (error.response?.status === 401 && !error.config.url.includes('/login')) {
-            console.log('Session expired, redirecting to login page...');
-            // Redirect ke halaman login jika berada di browser
+    (error) => {
+        // Jika error 401 (Unauthorized), arahkan ke halaman dashboard utama
+        if (error.response && error.response.status === 401) {
+            console.log('Session habis atau tidak terotentikasi, redirect ke dashboard utama');
+            // Redirect hanya dilakukan di browser
+            // Sementara dinonaktifkan untuk mencegah masalah berulang
+            /*
             if (typeof window !== 'undefined') {
-                window.location.href = '/login';
+                const currentPath = window.location.pathname;
+                // Hindari loop redirect, hanya redirect jika tidak di halaman beranda
+                if (currentPath !== '/') {
+                    window.location.href = '/';
+                } else {
+                    console.log('Menghindari loop redirect - sudah di halaman utama');
+                }
             }
+            */
         }
         return Promise.reject(error);
     }
 );
 
-// Auth Service
+// Auth services
 export const authService = {
-    // Mendapatkan CSRF cookie dari Laravel
-    getCsrfCookie: async () => {
-        try {
-            console.log('Getting CSRF token...');
-            const response = await axios.get(`${BACKEND_URL}/sanctum/csrf-cookie`, {
-                withCredentials: true
-            });
-            console.log('CSRF token response:', response);
-            return response;
-        } catch (error) {
-            console.error('Error getting CSRF token:', error);
-            throw error;
-        }
-    },
-    
-    // Register user baru
-    register: async (userData) => {
-        try {
-            // Ambil CSRF token terlebih dahulu
-            await authService.getCsrfCookie();
-            
-            // Buat FormData untuk mengirim data sesuai format backend
-            const formData = new FormData();
-            formData.append('nama', userData.name);
-            formData.append('email', userData.email);
-            formData.append('no_hp', userData.phone);
-            formData.append('password', userData.password);
-            if (userData.password_confirmation) {
-                formData.append('password_confirmation', userData.password_confirmation);
-            }
-            
-            console.log('Sending register request with formData');
-            
-            // Gunakan Axios langsung dengan FormData
-            return await axios.post(`${BACKEND_URL}/api/register`, formData, {
-                withCredentials: true,
-                headers: {
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                    // Content-Type tidak perlu diatur karena FormData sudah mengaturnya
-                }
-            });
-        } catch (error) {
-            console.error('Registration error:', error);
-            throw error;
-        }
-    },
-    
-    // Login user
+    // Login pengguna
     login: async (credentials) => {
-        try {
-            // Ambil CSRF token terlebih dahulu
-            await authService.getCsrfCookie();
-            
-            // Buat FormData untuk login
-            const formData = new FormData();
-            formData.append('email', credentials.email);
-            formData.append('password', credentials.password);
-            
-            console.log('Sending login request with formData');
-            
-            // Gunakan Axios langsung dengan FormData
-            return await axios.post(`${BACKEND_URL}/api/login`, formData, {
-                withCredentials: true,
-                headers: {
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                    // Content-Type tidak perlu diatur karena FormData sudah mengaturnya
-                }
-            });
-        } catch (error) {
-            console.error('Login error:', error);
-            throw error;
-        }
+        return axiosInstance.post('/login', credentials);
     },
     
-    // Logout user
-    logout: () => api.post('/logout'),
-
-    // Get authenticated user
-    getUser: () => api.get('/user'),
+    // Register pengguna baru
+    register: async (userData) => {
+        return axiosInstance.post('/register', userData);
+    },
+    
+    // Logout pengguna
+    logout: async () => {
+        return axiosInstance.post('/logout');
+    },
+    
+    // Mendapatkan data user yang sedang login
+    getUser: async () => {
+        return axiosInstance.get('/user');
+    }
 };
 
-// User Service
+// User services
 export const userService = {
-    // Mendapatkan semua user (admin only)
-    getAll: () => api.get('/users'),
+    // Mendapatkan semua user (admin)
+    getAll: async () => {
+        return axiosInstance.get('/users');
+    },
     
-    // Mendapatkan user by ID
-    getById: (id) => api.get(`/users/${id}`),
+    // Mendapatkan user berdasarkan id
+    getById: async (id) => {
+        return axiosInstance.get(`/users/${id}`);
+    },
+    
+    // Membuat user baru (admin)
+    create: async (userData) => {
+        return axiosInstance.post('/users', userData);
+    },
     
     // Update user
-    update: (id, userData) => api.put(`/users/${id}`, userData),
+    update: async (id, userData) => {
+        return axiosInstance.put(`/users/${id}`, userData);
+    },
     
-    // Cari user berdasarkan nomor HP
-    getByNoHp: (noHp) => api.get(`/users/no_hp/${noHp}`),
-    
-    // Menambahkan user baru (admin only)
-    create: (userData) => api.post('/users', userData),
-    
-    // Menghapus user (admin only)
-    delete: (id) => api.delete(`/users/${id}`),
+    // Hapus user
+    delete: async (id) => {
+        return axiosInstance.delete(`/users/${id}`);
+    }
 };
 
-// Lapangan Service
-export const fieldService = {
-    // Mendapatkan semua lapangan
-    getAll: () => api.get('/lapangan'),
-    
-    // Mendapatkan lapangan by ID
-    getById: (id) => api.get(`/lapangan/${id}`),
-    
-    // Menambahkan lapangan baru (admin only)
-    create: (lapanganData) => api.post('/lapangan', lapanganData),
-    
-    // Update lapangan (admin only)
-    update: (id, lapanganData) => api.put(`/lapangan/${id}`, lapanganData),
-    
-    // Menghapus lapangan (admin only)
-    delete: (id) => api.delete(`/lapangan/${id}`),
-};
-
-// Kategori Lapangan Service
-export const kategoriLapService = {
-    // Mendapatkan semua kategori
-    getAll: () => api.get('/kategori-lap'),
-    
-    // Mendapatkan kategori by ID
-    getById: (id) => api.get(`/kategori-lap/${id}`),
-    
-    // Menambahkan kategori baru (admin only)
-    create: (kategoriData) => api.post('/kategori-lap', kategoriData),
-    
-    // Update kategori (admin only)
-    update: (id, kategoriData) => api.put(`/kategori-lap/${id}`, kategoriData),
-    
-    // Menghapus kategori (admin only)
-    delete: (id) => api.delete(`/kategori-lap/${id}`),
-};
-
-// Fasilitas Service
-export const fasilitasService = {
-    // Mendapatkan semua fasilitas
-    getAll: () => api.get('/fasilitas'),
-    
-    // Mendapatkan fasilitas by ID
-    getById: (id) => api.get(`/fasilitas/${id}`),
-    
-    // Menambahkan fasilitas baru (admin only)
-    create: (fasilitasData) => api.post('/fasilitas', fasilitasData),
-    
-    // Update fasilitas (admin only)
-    update: (id, fasilitasData) => api.put(`/fasilitas/${id}`, fasilitasData),
-    
-    // Menghapus fasilitas (admin only)
-    delete: (id) => api.delete(`/fasilitas/${id}`),
-};
-
-// Status Lapangan Service
-export const statusService = {
-    // Mendapatkan semua status
-    getAll: () => api.get('/status-lapangan'),
-    
-    // Mendapatkan status by ID
-    getById: (id) => api.get(`/status-lapangan/${id}`),
-    
-    // Menambahkan status baru (admin only)
-    create: (statusData) => api.post('/status-lapangan', statusData),
-    
-    // Update status (admin only)
-    update: (id, statusData) => api.put(`/status-lapangan/${id}`, statusData),
-    
-    // Menghapus status (admin only)
-    delete: (id) => api.delete(`/status-lapangan/${id}`),
-};
-
-// Sesi Service
+// Session (Sesi) services
 export const sessionService = {
     // Mendapatkan semua sesi
-    getAll: () => api.get('/sesi'),
+    getAll: async () => {
+        return axiosInstance.get('/sesi');
+    },
     
-    // Mendapatkan sesi by ID
-    getById: (id) => api.get(`/sesi/${id}`),
+    // Mendapatkan semua sesi - alias untuk kompatibilitas
+    getSessions: async () => {
+        return axiosInstance.get('/sesi');
+    },
     
-    // Menambahkan sesi baru (admin only)
-    create: (sesiData) => api.post('/sesi', sesiData),
+    // Mendapatkan sesi berdasarkan id
+    getById: async (id) => {
+        if (!id) throw new Error('ID sesi diperlukan');
+        return axiosInstance.get(`/sesi/${id}`);
+    },
     
-    // Update sesi (admin only)
-    update: (id, sesiData) => api.put(`/sesi/${id}`, sesiData),
+    // Membuat sesi baru
+    create: async (sessionData) => {
+        try {
+            // Pastikan data dalam format yang benar sebelum dikirim
+            const validatedData = {
+                jam_mulai: sessionData.jam_mulai,
+                jam_selesai: sessionData.jam_selesai,
+                deskripsi: sessionData.deskripsi || ''
+            };
+            console.log('Mengirim data sesi ke server:', validatedData);
+            return axiosInstance.post('/sesi', validatedData);
+        } catch (error) {
+            console.error('Error creating session:', error);
+            throw error;
+        }
+    },
     
-    // Menghapus sesi (admin only)
-    delete: (id) => api.delete(`/sesi/${id}`),
+    // Tambah sesi baru - alias untuk kompatibilitas
+    createSession: async (sessionData) => {
+        return sessionService.create(sessionData);
+    },
+    
+    // Update sesi
+    update: async (id, sessionData) => {
+        try {
+            if (!id) throw new Error('ID sesi diperlukan untuk update');
+            
+            // Pastikan ID dalam format yang benar (angka)
+            const sessionId = String(id).trim();
+            if (!sessionId) throw new Error('ID sesi tidak valid');
+            
+            // Pastikan data dalam format yang benar sebelum dikirim
+            const validatedData = {
+                jam_mulai: sessionData.jam_mulai,
+                jam_selesai: sessionData.jam_selesai,
+                deskripsi: sessionData.deskripsi || ''
+            };
+            console.log(`Memperbarui sesi ID ${sessionId} dengan data:`, validatedData);
+            
+            // Pastikan URL dalam format yang benar dengan slash (/)
+            return axiosInstance.put(`/sesi/${sessionId}`, validatedData);
+        } catch (error) {
+            console.error(`Error updating session ${id}:`, error);
+            throw error;
+        }
+    },
+    
+    // Update sesi - alias untuk kompatibilitas
+    updateSession: async (id, sessionData) => {
+        return sessionService.update(id, sessionData);
+    },
+    
+    // Hapus sesi
+    delete: async (id) => {
+        if (!id) throw new Error('ID sesi diperlukan untuk delete');
+        return axiosInstance.delete(`/sesi/${id}`);
+    },
+    
+    // Hapus sesi - alias untuk kompatibilitas
+    deleteSession: async (id) => {
+        return sessionService.delete(id);
+    }
 };
 
-// Hari Service
+// Day (Hari) services
 export const dayService = {
     // Mendapatkan semua hari
-    getAll: () => api.get('/hari'),
+    getAll: async () => {
+        return axiosInstance.get('/hari');
+    },
     
-    // Mendapatkan hari by ID
-    getById: (id) => api.get(`/hari/${id}`),
+    // Mendapatkan semua hari - alias untuk kompatibilitas
+    getDays: async () => {
+        return axiosInstance.get('/hari');
+    },
     
-    // Menambahkan hari baru (admin only)
-    create: (hariData) => api.post('/hari', hariData),
+    // Mendapatkan hari berdasarkan id
+    getById: async (id) => {
+        return axiosInstance.get(`/hari/${id}`);
+    },
     
-    // Update hari (admin only)
-    update: (id, hariData) => api.put(`/hari/${id}`, hariData),
+    // Membuat hari baru
+    create: async (dayData) => {
+        return axiosInstance.post('/hari', dayData);
+    },
     
-    // Menghapus hari (admin only)
-    delete: (id) => api.delete(`/hari/${id}`),
+    // Membuat hari baru - alias untuk kompatibilitas
+    createDay: async (dayData) => {
+        return axiosInstance.post('/hari', dayData);
+    },
+    
+    // Update hari
+    update: async (id, dayData) => {
+        return axiosInstance.put(`/hari/${id}`, dayData);
+    },
+    
+    // Update hari - alias untuk kompatibilitas
+    updateDay: async (id, dayData) => {
+        return axiosInstance.put(`/hari/${id}`, dayData);
+    },
+    
+    // Hapus hari
+    delete: async (id) => {
+        return axiosInstance.delete(`/hari/${id}`);
+    },
+    
+    // Hapus hari - alias untuk kompatibilitas
+    deleteDay: async (id) => {
+        return axiosInstance.delete(`/hari/${id}`);
+    }
 };
 
-// Booking Service
+// Category (Kategori) services
+export const categoryService = {
+    // Mendapatkan semua kategori
+    getAll: async () => {
+        return axiosInstance.get('/kategori-lap');
+    },
+    
+    // Mendapatkan kategori berdasarkan id
+    getById: async (id) => {
+        return axiosInstance.get(`/kategori-lap/${id}`);
+    },
+    
+    // Membuat kategori baru
+    create: async (categoryData) => {
+        return axiosInstance.post('/kategori-lap', categoryData);
+    },
+    
+    // Update kategori
+    update: async (id, categoryData) => {
+        return axiosInstance.put(`/kategori-lap/${id}`, categoryData);
+    },
+    
+    // Hapus kategori
+    delete: async (id) => {
+        return axiosInstance.delete(`/kategori-lap/${id}`);
+    }
+};
+
+// Field (Lapangan) services
+export const fieldService = {
+    // Mendapatkan semua lapangan
+    getAll: async () => {
+        return axiosInstance.get('/lapangan');
+    },
+    
+    // Mendapatkan lapangan berdasarkan id
+    getById: async (id) => {
+        return axiosInstance.get(`/lapangan/${id}`);
+    },
+    
+    // Membuat lapangan baru
+    create: async (fieldData) => {
+        return axiosInstance.post('/lapangan', fieldData);
+    },
+    
+    // Update lapangan
+    update: async (id, fieldData) => {
+        return axiosInstance.put(`/lapangan/${id}`, fieldData);
+    },
+    
+    // Hapus lapangan
+    delete: async (id) => {
+        return axiosInstance.delete(`/lapangan/${id}`);
+    }
+};
+
+// Facility (Fasilitas) services
+export const facilityService = {
+    // Mendapatkan semua fasilitas
+    getAll: async () => {
+        return axiosInstance.get('/fasilitas');
+    },
+    
+    // Mendapatkan fasilitas berdasarkan id
+    getById: async (id) => {
+        return axiosInstance.get(`/fasilitas/${id}`);
+    },
+    
+    // Membuat fasilitas baru
+    create: async (facilityData) => {
+        return axiosInstance.post('/fasilitas', facilityData);
+    },
+    
+    // Update fasilitas
+    update: async (id, facilityData) => {
+        return axiosInstance.put(`/fasilitas/${id}`, facilityData);
+    },
+    
+    // Hapus fasilitas
+    delete: async (id) => {
+        return axiosInstance.delete(`/fasilitas/${id}`);
+    }
+};
+
+// Status Lapangan services
+export const statusService = {
+    // Mendapatkan semua status lapangan
+    getAll: async () => {
+        return axiosInstance.get('/status-lapangan');
+    },
+    
+    // Mendapatkan status berdasarkan id
+    getById: async (id) => {
+        return axiosInstance.get(`/status-lapangan/${id}`);
+    },
+    
+    // Membuat status baru
+    create: async (statusData) => {
+        return axiosInstance.post('/status-lapangan', statusData);
+    },
+    
+    // Update status
+    update: async (id, statusData) => {
+        return axiosInstance.put(`/status-lapangan/${id}`, statusData);
+    },
+    
+    // Hapus status
+    delete: async (id) => {
+        return axiosInstance.delete(`/status-lapangan/${id}`);
+    }
+};
+
+// Booking (Pemesanan) services
 export const bookingService = {
-    // Mendapatkan semua booking
-    getAll: () => api.get('/pemesanan'),
+    // Mendapatkan semua pemesanan
+    getAll: async () => {
+        return axiosInstance.get('/pemesanan');
+    },
     
-    // Mendapatkan booking by ID
-    getById: (id) => api.get(`/pemesanan/${id}`),
+    // Mendapatkan pemesanan berdasarkan id
+    getById: async (id) => {
+        return axiosInstance.get(`/pemesanan/${id}`);
+    },
     
-    // Membuat booking baru
-    create: (pemesananData) => api.post('/pemesanan', pemesananData),
+    // Mendapatkan pemesanan user yang login
+    getUserBookings: async () => {
+        return axiosInstance.get('/pemesanan/user');
+    },
     
-    // Update booking
-    update: (id, pemesananData) => api.put(`/pemesanan/${id}`, pemesananData),
+    // Cek ketersediaan lapangan
+    checkAvailability: async (params) => {
+        return axiosInstance.get('/pemesanan/check-availability', { params });
+    },
     
-    // Menghapus booking
-    delete: (id) => api.delete(`/pemesanan/${id}`),
+    // Membuat pemesanan baru
+    create: async (bookingData) => {
+        return axiosInstance.post('/pemesanan', bookingData);
+    },
     
-    // Check ketersediaan lapangan
-    checkAvailability: (params) => api.get('/pemesanan/check-availability', { params }),
-
-    // Mendapatkan booking pengguna tertentu
-    getUserBookings: () => api.get('/pemesanan/user'),
+    // Update pemesanan
+    update: async (id, bookingData) => {
+        return axiosInstance.put(`/pemesanan/${id}`, bookingData);
+    },
+    
+    // Hapus pemesanan
+    delete: async (id) => {
+        return axiosInstance.delete(`/pemesanan/${id}`);
+    }
 };
 
-// Pembayaran Service
+// Payment (Pembayaran) services
 export const paymentService = {
     // Mendapatkan semua pembayaran
-    getAll: () => api.get('/pembayaran'),
+    getAll: async () => {
+        return axiosInstance.get('/pembayaran');
+    },
     
-    // Mendapatkan pembayaran by ID
-    getById: (id) => api.get(`/pembayaran/${id}`),
+    // Mendapatkan pembayaran berdasarkan id
+    getById: async (id) => {
+        return axiosInstance.get(`/pembayaran/${id}`);
+    },
     
     // Membuat pembayaran baru
-    create: (pembayaranData) => api.post('/pembayaran', pembayaranData),
+    create: async (paymentData) => {
+        return axiosInstance.post('/pembayaran', paymentData);
+    },
     
     // Update pembayaran
-    update: (id, pembayaranData) => api.put(`/pembayaran/${id}`, pembayaranData),
+    update: async (id, paymentData) => {
+        return axiosInstance.put(`/pembayaran/${id}`, paymentData);
+    },
     
-    // Menghapus pembayaran
-    delete: (id) => api.delete(`/pembayaran/${id}`),
+    // Hapus pembayaran
+    delete: async (id) => {
+        return axiosInstance.delete(`/pembayaran/${id}`);
+    }
 };
-
-export default api; 
