@@ -89,9 +89,15 @@ export default function Topbar() {
         open={isMenuOpen}
         onClose={handleMenuClose}
         >
-        <MenuItem onClick={handleMenuClose}>Profil</MenuItem>
-        <MenuItem onClick={handleMenuClose}>Pengaturan</MenuItem>
-        <MenuItem onClick={handleMenuClose}>Logout</MenuItem>
+        <MenuItem onClick={handleMenuClose}>
+            <Typography component="span">Profil</Typography>
+        </MenuItem>
+        <MenuItem onClick={handleMenuClose}>
+            <Typography component="span">Pengaturan</Typography>
+        </MenuItem>
+        <MenuItem onClick={handleMenuClose}>
+            <Typography component="span">Logout</Typography>
+        </MenuItem>
         </Menu>
     )
 
@@ -109,7 +115,7 @@ export default function Topbar() {
             }}
         >
             <Toolbar>
-            <Typography variant="h6" noWrap component="div" sx={{ display: { xs: 'none', sm: 'block' } }}>
+            <Typography variant="h6" component="div" noWrap sx={{ display: { xs: 'none', sm: 'block' } }}>
                 Dashboard
             </Typography>
             <Search>

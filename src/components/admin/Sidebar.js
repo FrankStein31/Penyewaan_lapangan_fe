@@ -66,8 +66,8 @@ export default function Sidebar() {
             <Box sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
             <Avatar sx={{ bgcolor: theme => theme.palette.primary.main }}>A</Avatar>
             <Box sx={{ ml: 2 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Admin</Typography>
-                <Typography variant="body2" color="textSecondary">Administrator</Typography>
+                <Typography variant="subtitle1" component="div" sx={{ fontWeight: 600 }}>Admin</Typography>
+                <Typography variant="body2" component="div" color="textSecondary">Administrator</Typography>
             </Box>
             </Box>
             
@@ -96,7 +96,13 @@ export default function Sidebar() {
                     >
                     {item.icon}
                     </ListItemIcon>
-                    <ListItemText primary={item.text} />
+                    <ListItemText 
+                    primary={
+                        <Typography component="span">
+                        {item.text}
+                        </Typography>
+                    } 
+                    />
                 </ListItemButton>
                 </ListItem>
             ))}
@@ -116,7 +122,13 @@ export default function Sidebar() {
                 <ListItemIcon sx={{ minWidth: '40px' }}>
                     <LogoutIcon />
                 </ListItemIcon>
-                <ListItemText primary="Logout" />
+                <ListItemText 
+                primary={
+                    <Typography component="span">
+                    Logout
+                    </Typography>
+                }
+                />
                 </ListItemButton>
             </ListItem>
             </List>
