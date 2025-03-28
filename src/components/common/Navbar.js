@@ -65,18 +65,33 @@ export default function Navbar() {
             ))}
           </div>
 
-          <Link
-            href="/#contact"
-            className={`
-              px-5 py-2 rounded-full font-bold tracking-wider
-              transition-all duration-300 ease-in-out
-              ${isScrolled
-                ? 'bg-blue-600 text-white hover:bg-blue-700'
-                : 'bg-white/20 text-white border border-white/30 hover:bg-white/30'}
-            `}
-          >
-            Daftar Sekarang
-          </Link>
+          <div className="flex space-x-3">
+            <Link
+              href="/login"
+              className={`
+                px-5 py-2 rounded-full font-bold tracking-wider
+                transition-all duration-300 ease-in-out
+                ${isScrolled
+                  ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                  : 'bg-white/20 text-white border border-white/30 hover:bg-white/30'}
+              `}
+            >
+              Login
+            </Link>
+            
+            <Link
+              href="/register"
+              className={`
+                px-5 py-2 rounded-full font-bold tracking-wider
+                transition-all duration-300 ease-in-out
+                ${isScrolled
+                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-white/20 text-white border border-white/30 hover:bg-white/30'}
+              `}
+            >
+              Daftar
+            </Link>
+          </div>
         </div>
 
         {/* Mobile Menu Toggle */}
@@ -128,13 +143,22 @@ export default function Navbar() {
               </Link>
             ))}
 
-            <Link
-              href="/#contact"
-              className="w-full px-4 py-3 font-bold tracking-wider text-center text-white transition-all duration-300 bg-blue-600 rounded-full hover:bg-blue-700"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Daftar Sekarang
-            </Link>
+            <div className="flex flex-col gap-2">
+              <Link
+                href="/login"
+                className="w-full px-4 py-3 font-bold tracking-wider text-center text-white transition-all duration-300 bg-blue-600 rounded-full hover:bg-blue-700"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Login
+              </Link>
+              <Link
+                href="/#contact" 
+                className="w-full px-4 py-3 font-bold tracking-wider text-center text-white transition-all duration-300 bg-blue-600 rounded-full hover:bg-blue-700"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Daftar
+              </Link>
+            </div>
           </div>
         </div>
       )}
