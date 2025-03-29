@@ -171,6 +171,27 @@ export default function JadwalPage() {
     const formatTimeForServer = (timeString) => {
         if (!timeString) return null;
         
+        // Cek jika string berisi AM/PM (format 12 jam)
+        if (timeString.includes('AM') || timeString.includes('PM')) {
+            // Konversi dari 12-jam ke 24-jam format
+            const [timePart, ampm] = timeString.split(' ');
+            let [hours, minutes] = timePart.split(':');
+            
+            hours = parseInt(hours);
+            
+            // Ubah jam 12 AM menjadi 00
+            if (hours === 12 && ampm === 'AM') {
+                hours = 0;
+            }
+            // Tambahkan 12 jam jika PM dan bukan 12 PM
+            else if (ampm === 'PM' && hours !== 12) {
+                hours += 12;
+            }
+            
+            // Format sebagai string H:i (format yang diharapkan backend)
+            return `${hours}:${minutes}`;
+        }
+        
         // Validasi format waktu dengan regex (HH:MM atau HH:MM:SS)
         const timeRegex = /^([01]?[0-9]|2[0-3]):([0-5][0-9])(:([0-5][0-9]))?$/;
         if (!timeRegex.test(timeString)) {
@@ -178,13 +199,11 @@ export default function JadwalPage() {
             return null;
         }
         
-        // Pastikan format yang dikirim adalah HH:MM:SS
-        if (timeString.length === 5) {
-            return timeString + ':00';
-        } else if (timeString.length === 8) {
-            return timeString;
+        // Konversi ke format H:i (hapus leading zero pada jam jika ada)
+        if (timeString.length >= 5) {
+            const [hours, minutes] = timeString.substring(0, 5).split(':');
+            return `${parseInt(hours)}:${minutes}`;
         } else {
-            // Format tidak valid
             console.error('Format waktu tidak valid:', timeString);
             return null;
         }
@@ -590,8 +609,11 @@ export default function JadwalPage() {
                                     onChange={handleSesiTimeChange}
                                     sx={{ width: '100%' }}
                                     InputLabelProps={{ shrink: true }}
-                                    inputProps={{ step: 300 }}
-                                    helperText="Format: HH:MM (24 jam)"
+                                    inputProps={{ 
+                                        step: 300,
+                                        pattern: '[0-9]{2}:[0-9]{2}'
+                                    }}
+                                    helperText="Format: HH:MM (format 24 jam, contoh: 08:00)"
                                     required
                                     error={!sesiFormData.jam_mulai}
                                 />
@@ -605,8 +627,11 @@ export default function JadwalPage() {
                                     onChange={handleSesiTimeChange}
                                     sx={{ width: '100%' }}
                                     InputLabelProps={{ shrink: true }}
-                                    inputProps={{ step: 300 }}
-                                    helperText="Format: HH:MM (24 jam)"
+                                    inputProps={{ 
+                                        step: 300,
+                                        pattern: '[0-9]{2}:[0-9]{2}'
+                                    }}
+                                    helperText="Format: HH:MM (format 24 jam, contoh: 09:00)"
                                     required
                                     error={!sesiFormData.jam_selesai}
                                 />
