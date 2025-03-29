@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
+import { useRouter } from 'next/navigation'
 import {
     AppBar,
     Toolbar,
@@ -63,12 +65,19 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
 export default function Topbar() {
     const [anchorEl, setAnchorEl] = useState(null)
     const isMenuOpen = Boolean(anchorEl)
+    const { logout, user } = useAuth()
+    const router = useRouter()
 
     const handleProfileMenuOpen = (event) => {
         setAnchorEl(event.currentTarget)
     }
 
     const handleMenuClose = () => {
+        setAnchorEl(null)
+    }
+    
+    const handleLogout = () => {
+        logout()
         setAnchorEl(null)
     }
 
@@ -95,7 +104,7 @@ export default function Topbar() {
         <MenuItem onClick={handleMenuClose}>
             <Typography component="span">Pengaturan</Typography>
         </MenuItem>
-        <MenuItem onClick={handleMenuClose}>
+        <MenuItem onClick={handleLogout}>
             <Typography component="span">Logout</Typography>
         </MenuItem>
         </Menu>

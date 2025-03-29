@@ -17,22 +17,34 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.response.use(
     (response) => response,
     (error) => {
-        // Jika error 401 (Unauthorized), arahkan ke halaman dashboard utama
+        // Jika error 401 (Unauthorized), arahkan ke halaman login
         if (error.response && error.response.status === 401) {
-            console.log('Session habis atau tidak terotentikasi, redirect ke dashboard utama');
-            // Redirect hanya dilakukan di browser
-            // Sementara dinonaktifkan untuk mencegah masalah berulang
-            /*
+            console.log('Session habis atau tidak terotentikasi, redirect ke login');
+            
+            // Hapus data autentikasi dari localStorage
             if (typeof window !== 'undefined') {
+                localStorage.removeItem('user');
+                localStorage.removeItem('token');
+                sessionStorage.clear();
+                
+                // Hapus cookie
+                try {
+                    document.cookie.split(";").forEach(function(c) {
+                        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+                    });
+                } catch (e) {
+                    console.error('Error saat menghapus cookies:', e);
+                }
+                
+                // Redirect ke login, kecuali jika di halaman publik
                 const currentPath = window.location.pathname;
-                // Hindari loop redirect, hanya redirect jika tidak di halaman beranda
-                if (currentPath !== '/') {
-                    window.location.href = '/';
+                if (currentPath !== '/' && currentPath !== '/login' && currentPath !== '/register') {
+                    console.log('Redirecting ke halaman login...');
+                    window.location.href = '/login';
                 } else {
-                    console.log('Menghindari loop redirect - sudah di halaman utama');
+                    console.log('Sudah di halaman publik, tidak perlu redirect');
                 }
             }
-            */
         }
         return Promise.reject(error);
     }
@@ -52,7 +64,16 @@ export const authService = {
     
     // Logout pengguna
     logout: async () => {
-        return axiosInstance.post('/logout');
+        try {
+            const response = await axiosInstance.post('/logout', {}, {
+                withCredentials: true,
+            });
+            console.log('Logout API response:', response);
+            return response;
+        } catch (error) {
+            console.error('Error in logout API call:', error);
+            throw error;
+        }
     },
     
     // Mendapatkan data user yang sedang login
