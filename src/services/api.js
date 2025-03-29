@@ -280,14 +280,22 @@ export const fieldService = {
         return axiosInstance.get(`/lapangan/${id}`);
     },
     
-    // Membuat lapangan baru
+    // Membuat lapangan baru (dengan support untuk upload file/foto)
     create: async (fieldData) => {
-        return axiosInstance.post('/lapangan', fieldData);
+        return axiosInstance.post('/lapangan', fieldData, {
+            headers: {
+                'Content-Type': 'multipart/form-data' // Penting untuk upload file
+            }
+        });
     },
     
-    // Update lapangan
+    // Update lapangan (dengan support untuk upload file/foto)
     update: async (id, fieldData) => {
-        return axiosInstance.put(`/lapangan/${id}`, fieldData);
+        return axiosInstance.post(`/lapangan/${id}`, fieldData, {
+            headers: {
+                'Content-Type': 'multipart/form-data' // Penting untuk upload file
+            }
+        });
     },
     
     // Hapus lapangan
