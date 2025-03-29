@@ -22,11 +22,11 @@ import {
     CircularProgress,
     Alert
 } from '@mui/material';
-import { Person, CalendarMonth, History } from '@mui/icons-material';
+import { Person, CalendarMonth, History, Logout as LogoutIcon } from '@mui/icons-material';
 import { bookingService } from '@/services/api';
 
 export default function CustomerDashboard() {
-    const { user, loading: authLoading, isAuthenticated } = useAuth();
+    const { user, loading: authLoading, isAuthenticated, logout } = useAuth();
     const router = useRouter();
     
     const [activeTab, setActiveTab] = useState(0);
@@ -37,9 +37,31 @@ export default function CustomerDashboard() {
     useEffect(() => {
         // Redirect if not authenticated
         if (!authLoading && !isAuthenticated) {
-            router.push('/login');
+            console.log('User not authenticated, redirecting to login');
+            router.replace('/login');
         }
     }, [authLoading, isAuthenticated, router]);
+    
+    // Tambahan pengecekan saat halaman dimuat
+    useEffect(() => {
+        // Periksa otentikasi saat komponen dimuat
+        const checkAuth = async () => {
+            try {
+                // Coba akses endpoint yang memerlukan otentikasi untuk validasi
+                await bookingService.getUserBookings();
+            } catch (error) {
+                if (error.response && error.response.status === 401) {
+                    console.log('Token tidak valid, redirect ke login');
+                    logout();
+                    router.replace('/login');
+                }
+            }
+        };
+        
+        if (!authLoading && isAuthenticated) {
+            checkAuth();
+        }
+    }, [authLoading, isAuthenticated, logout, router]);
     
     useEffect(() => {
         const fetchBookings = async () => {
@@ -158,6 +180,25 @@ export default function CustomerDashboard() {
                                 sx={{ mb: 2 }}
                             >
                                 Pesan Lapangan
+                            </Button>
+                            <Button 
+                                fullWidth 
+                                variant="outlined" 
+                                color="error" 
+                                onClick={() => logout()}
+                                startIcon={<LogoutIcon />}
+                                sx={{ 
+                                    mb: 2,
+                                    borderRadius: '8px',
+                                    transition: 'all 0.3s',
+                                    '&:hover': {
+                                        backgroundColor: 'error.light',
+                                        color: 'error.contrastText',
+                                        transform: 'scale(1.02)'
+                                    }
+                                }}
+                            >
+                                Logout
                             </Button>
                         </Box>
                     </Paper>

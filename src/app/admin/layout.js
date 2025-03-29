@@ -34,14 +34,50 @@ export default function AdminLayout({ children }) {
         if (!loading) {
             if (!isAuthenticated) {
                 // Redirect ke login jika tidak terautentikasi
-                router.push('/login')
+                console.log('Admin not authenticated, redirecting to login');
+                router.replace('/login');
             } else if (!isAdmin()) {
                 // Redirect ke dashboard jika bukan admin
-                router.push('/dashboard')
+                console.log('User is not admin, redirecting to dashboard');
+                router.replace('/dashboard');
             }
-            setChecking(false)
+            setChecking(false);
         }
-    }, [isAuthenticated, loading, router, isAdmin])
+    }, [isAuthenticated, loading, router, isAdmin]);
+    
+    // Tambahan pengecekan validitas token saat komponen dimount
+    useEffect(() => {
+        // Verifikasi token dengan server
+        const verifyToken = async () => {
+            try {
+                // Coba akses endpoint yang memerlukan admin privileges
+                if (isAuthenticated && isAdmin()) {
+                    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/users`, {
+                        method: 'GET',
+                        credentials: 'include',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Token tidak valid atau kadaluarsa');
+                    }
+                }
+            } catch (error) {
+                console.error('Error verifikasi admin token:', error);
+                // Force logout dan redirect ke login
+                if (typeof window !== 'undefined') {
+                    window.location.href = '/login';
+                }
+            }
+        };
+        
+        if (!loading && isAuthenticated && isAdmin()) {
+            verifyToken();
+        }
+    }, [isAdmin, isAuthenticated, loading]);
 
     // Tampilkan loading spinner ketika sedang mengecek auth
     if (loading || checking) {

@@ -77,20 +77,35 @@ export function AuthProvider({ children }) {
             const response = await authService.login({ email, password });
             console.log('Login response:', response);
             
-            if (response.data && response.data.success) {
-                // Simpan user data
-                const userData = response.data.data;
-                setUser(userData);
-                setIsAuthenticated(true);
+            if (response.data) {
+                // Coba dapatkan user dari berbagai kemungkinan struktur respons
+                const userData = response.data.data || response.data;
                 
-                // Redirect berdasarkan role
-                if (userData.role === 'admin') {
-                    router.push('/admin');
+                if (userData) {
+                    // Konversi ke format yang konsisten dengan frontend
+                    const formattedUser = {
+                        id: userData.id,
+                        name: userData.nama,         // Backend menggunakan 'nama'
+                        email: userData.email,
+                        phone: userData.no_hp,       // Backend menggunakan 'no_hp'
+                        role: userData.role || 'user'
+                    };
+                    
+                    console.log('Data user login setelah diformat:', formattedUser);
+                    setUser(formattedUser);
+                    setIsAuthenticated(true);
+                    
+                    // Redirect berdasarkan role
+                    if (formattedUser.role === 'admin') {
+                        router.push('/admin');
+                    } else {
+                        router.push('/dashboard');
+                    }
+                    
+                    return response.data;
                 } else {
-                    router.push('/dashboard');
+                    throw new Error('Login berhasil namun data pengguna tidak valid');
                 }
-                
-                return response.data;
             } else {
                 throw new Error('Login gagal. Data tidak valid.');
             }
@@ -113,16 +128,36 @@ export function AuthProvider({ children }) {
             const response = await authService.register(userData);
             console.log('Register response:', response);
             
-            if (response.data && response.data.success) {
-                // Simpan user data
-                const newUser = response.data.data;
-                setUser(newUser);
-                setIsAuthenticated(true);
+            // Pastikan data respons ada
+            if (response.data) {
+                // Simpan user data sesuai struktur respons dari API
+                // Kemungkinan struktur { data: {...}, status: 201, statusText: 'Created' }
+                // atau { message: 'User registered successfully', data: {...}, success: true }
                 
-                // Redirect ke dashboard customer
-                router.push('/dashboard');
+                // Coba dapatkan user dari berbagai kemungkinan struktur respons
+                const newUser = response.data.data || response.data;
                 
-                return response.data;
+                if (newUser) {
+                    // Konversi ke format yang konsisten dengan frontend
+                    const formattedUser = {
+                        id: newUser.id,
+                        name: newUser.nama,         // Backend menggunakan 'nama'
+                        email: newUser.email,
+                        phone: newUser.no_hp,       // Backend menggunakan 'no_hp'
+                        role: newUser.role || 'user'
+                    };
+                    
+                    console.log('Data user setelah diformat:', formattedUser);
+                    setUser(formattedUser);
+                    setIsAuthenticated(true);
+                    
+                    // Redirect ke dashboard customer
+                    router.push('/dashboard');
+                    
+                    return response.data;
+                } else {
+                    throw new Error('Registrasi berhasil namun data pengguna tidak valid');
+                }
             } else {
                 throw new Error('Registrasi gagal. Data tidak valid.');
             }
@@ -139,19 +174,44 @@ export function AuthProvider({ children }) {
     const logout = async () => {
         try {
             setLoading(true);
+            console.log('Proses logout dimulai...');
             
-            // Panggil API logout
-            await authService.logout();
-            
-            // Reset state
+            // Reset state terlebih dahulu untuk memastikan UI langsung merespons
             setUser(null);
             setIsAuthenticated(false);
-            setAuthChecked(false); // Reset untuk cek ulang saat login kembali
+            setAuthChecked(false);
             
-            // Redirect ke homepage
-            router.push('/');
+            // Hapus dari localStorage
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem('user');
+                localStorage.removeItem('token');
+                // Hapus semua item yang mungkin terkait dengan autentikasi
+                sessionStorage.clear();
+                console.log('Data user dihapus dari localStorage dan sessionStorage');
+                
+                // Untuk memastikan tidak ada cache lain
+                try {
+                    document.cookie.split(";").forEach(function(c) {
+                        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+                    });
+                    console.log('Cookies dihapus');
+                } catch (e) {
+                    console.error('Error saat menghapus cookies:', e);
+                }
+            }
+            
+            // Panggil API logout setelah state direset
+            await authService.logout();
+            console.log('Respons dari API logout diterima');
+            
+            console.log('Status autentikasi di-reset, redirect ke homepage');
+            
+            // Force refresh halaman untuk memastikan semua state direset
+            window.location.href = '/';
         } catch (error) {
             console.error('Logout error:', error);
+            // Tetap redirect meskipun terjadi error
+            window.location.href = '/';
         } finally {
             setLoading(false);
         }

@@ -52,7 +52,13 @@ export default function Sidebar() {
     const { logout } = useAuth()
     
     const handleLogout = async () => {
-        await logout()
+        console.log('Admin logout diklik')
+        try {
+            await logout()
+            console.log('Admin berhasil logout')
+        } catch (error) {
+            console.error('Error saat logout admin:', error)
+        }
     }
     
     return (
