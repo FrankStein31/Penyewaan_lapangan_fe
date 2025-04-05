@@ -44,7 +44,7 @@ export default function AdminLayout({ children }) {
             setChecking(false);
         }
     }, [isAuthenticated, loading, router, isAdmin]);
-    
+
     // Tambahan pengecekan validitas token saat komponen dimount
     useEffect(() => {
         // Verifikasi token dengan server
@@ -60,7 +60,7 @@ export default function AdminLayout({ children }) {
                             'Accept': 'application/json'
                         }
                     });
-                    
+
                     if (!response.ok) {
                         throw new Error('Token tidak valid atau kadaluarsa');
                     }
@@ -73,7 +73,7 @@ export default function AdminLayout({ children }) {
                 }
             }
         };
-        
+
         if (!loading && isAuthenticated && isAdmin()) {
             verifyToken();
         }
@@ -82,13 +82,13 @@ export default function AdminLayout({ children }) {
     // Tampilkan loading spinner ketika sedang mengecek auth
     if (loading || checking) {
         return (
-            <Box sx={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
-                alignItems: 'center', 
-                width: '100vw', 
+            <Box sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                width: '100vw',
                 height: '100vh',
-                bgcolor: 'background.default'  
+                bgcolor: 'background.default'
             }}>
                 <CircularProgress />
             </Box>
@@ -99,10 +99,10 @@ export default function AdminLayout({ children }) {
     if (isAuthenticated && isAdmin()) {
         return (
             <ThemeProvider theme={theme}>
-            <CssBaseline />
-            <Box sx={{ display: 'flex' }}>
-                {children}
-            </Box>
+                <CssBaseline />
+                <Box sx={{ display: 'flex' }}>
+                    {children}
+                </Box>
             </ThemeProvider>
         )
     }
