@@ -9,7 +9,7 @@ export default function Layout({ children }) {
         <AuthProvider>
           {children}
         </AuthProvider>
-        
+
         {/* Script untuk menghapus cookie tidak valid */}
         <Script id="auth-check" strategy="afterInteractive">
           {`

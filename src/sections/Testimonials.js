@@ -46,18 +46,39 @@ export default function Testimonials() {
     // Fetch random avatars
     useEffect(() => {
         const fetchAvatars = async () => {
-            const urls = await Promise.all(
-                testimonials.map(async (testimonial) => {
-                    const response = await fetch(`https://randomuser.me/api/?gender=${testimonial.gender}`);
-                    const data = await response.json();
-                    return data.results[0].picture.large;
-                })
-            );
-            setAvatarUrls(urls);
+            if (typeof window === "undefined") return; // SSR protection
+
+            try {
+                const urls = await Promise.all(
+                    testimonials.map(async (testimonial) => {
+                        const gender = testimonial?.gender || "male";
+                        try {
+                            const response = await fetch(`https://randomuser.me/api/?gender=${gender}`);
+
+                            if (!response.ok) {
+                                throw new Error(`Failed to fetch avatar: ${response.status}`);
+                            }
+
+                            const data = await response.json();
+                            return data.results[0]?.picture?.large || "/default-avatar.png"; // Fallback
+                        } catch (err) {
+                            console.warn("Avatar fetch failed for", testimonial.name, err);
+                            return "/default-avatar.png"; // Fallback
+                        }
+                    })
+                );
+
+                setAvatarUrls(urls);
+            } catch (error) {
+                console.error("Error fetching avatars:", error);
+            }
         };
 
-        fetchAvatars();
-    }, []);
+        if (testimonials && testimonials.length > 0) {
+            fetchAvatars();
+        }
+    }, []);// tambahkan dependencies kalau datanya dari props/state
+
 
     const nextTestimonial = () => {
         setActiveIndex((prevIndex) => (prevIndex + 1) % testimonials.length);
