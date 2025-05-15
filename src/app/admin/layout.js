@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { CssBaseline, ThemeProvider, createTheme, CircularProgress } from '@mui/material'
 import Box from '@mui/material/Box'
+import Script from 'next/script'
 
 // Tema Material UI
 const theme = createTheme({

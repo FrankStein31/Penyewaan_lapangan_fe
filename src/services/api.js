@@ -422,3 +422,40 @@ export const paymentService = {
         return axiosInstance.delete(`/pembayaran/${id}`);
     }
 };
+
+// src/services/api.js
+
+export async function getUserPayments() {
+    // Simulasi panggilan API
+    return [
+        { id: 1, date: '2025-05-01', total: 150000, status: 'Lunas' },
+        { id: 2, date: '2025-04-20', total: 100000, status: 'Pending' },
+    ]
+}
+
+export async function getUserNotifications() {
+    // Simulasi panggilan API
+    return [
+        { id: 1, message: 'Pembayaran berhasil dikonfirmasi.', timestamp: '2025-05-01T10:00:00' },
+        { id: 2, message: 'Jadwal booking kamu hari ini jam 16:00.', timestamp: '2025-05-14T07:00:00' },
+    ]
+}
+export async function getUserBookings() {
+    // Simulasi panggilan API
+    return [
+        { id: 1, date: '2025-05-01', time: '16:00', field: 'Lapangan A' },
+        { id: 2, date: '2025-05-02', time: '18:00', field: 'Lapangan B' },
+    ]
+}
+
+// Tambahkan fungsi ini di services/api.js
+
+export async function getUserProfile() {
+    // Simulasi data dari backend
+    return {
+        name: 'Ahmad Santoso',
+        email: 'ahmad@example.com',
+        phone: '08123456789',
+        address: 'Jl. Melati No. 123, Jakarta Selatan',
+    }
+}
