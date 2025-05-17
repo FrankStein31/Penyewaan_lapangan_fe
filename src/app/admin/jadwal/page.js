@@ -94,68 +94,112 @@ export default function JadwalPage() {
     // Fungsi untuk mengambil data sesi dari API
     const fetchSesi = async () => {
         try {
-            setLoadingSesi(true)
-            setErrorSesi(null)
+            setLoadingSesi(true);
+            setErrorSesi(null);
             
-            const response = await sessionService.getSessions()
-            console.log('Response sesi:', response)
+            console.log('Mengambil data sesi...');
+            const response = await sessionService.getSessions();
+            console.log('Response sesi lengkap:', response);
             
             // Pastikan respons mengandung array
             if (response && response.data) {
                 // Periksa struktur respons dan ambil array data
-                const dataArray = Array.isArray(response.data) 
-                    ? response.data 
-                    : (response.data.data || [])
-                    
-                console.log('Data sesi array:', dataArray)
-                setSesiList(dataArray)
+                let dataArray = [];
+                
+                if (Array.isArray(response.data)) {
+                    console.log('Response.data adalah array');
+                    dataArray = response.data;
+                } else if (response.data.data && Array.isArray(response.data.data)) {
+                    console.log('Response.data.data adalah array');
+                    dataArray = response.data.data;
+                } else {
+                    console.log('Format tidak dikenali, mencoba konversi dari objek');
+                    dataArray = []; 
+                }
+                
+                console.log('Data sesi yang diproses:', dataArray);
+                setSesiList(dataArray || []);
             } else {
-                setSesiList([])
+                console.error('Response tidak mengandung data yang benar:', response);
+                setSesiList([]); 
             }
         } catch (err) {
-            console.error('Error saat mengambil data sesi:', err)
+            console.error('Error saat mengambil data sesi:', err);
+            
+            // Log detail error untuk debugging
+            if (err.response) {
+                console.log('Error response status:', err.response.status);
+                console.log('Error response data:', err.response.data);
+            } else if (err.request) {
+                console.log('Error request:', err.request);
+            } else {
+                console.log('Error message:', err.message);
+            }
+            
             // Error 401 sudah ditangani interceptor, hanya tampilkan pesan untuk error lain
             if (!err.response || err.response.status !== 401) {
-                setErrorSesi('Gagal memuat data sesi. Silakan coba lagi.')
+                setErrorSesi('Gagal memuat data sesi. Silakan coba lagi.');
             }
-            setSesiList([]) // Set sebagai array kosong saat error
+            setSesiList([]); // Set sebagai array kosong saat error
         } finally {
-            setLoadingSesi(false)
+            setLoadingSesi(false);
         }
-    }
+    };
 
     // Fungsi untuk mengambil data hari dari API
     const fetchHari = async () => {
         try {
-            setLoadingHari(true)
-            setErrorHari(null)
+            setLoadingHari(true);
+            setErrorHari(null);
             
-            const response = await dayService.getDays()
-            console.log('Response hari:', response)
+            console.log('Mengambil data hari...');
+            const response = await dayService.getDays();
+            console.log('Response hari lengkap:', response);
             
             // Pastikan respons mengandung array
             if (response && response.data) {
                 // Periksa struktur respons dan ambil array data
-                const dataArray = Array.isArray(response.data) 
-                    ? response.data 
-                    : (response.data.data || [])
-                    
-                console.log('Data hari array:', dataArray)
-                setHariList(dataArray)
+                let dataArray = [];
+                
+                if (Array.isArray(response.data)) {
+                    console.log('Response.data adalah array');
+                    dataArray = response.data;
+                } else if (response.data.data && Array.isArray(response.data.data)) {
+                    console.log('Response.data.data adalah array');
+                    dataArray = response.data.data;
+                } else {
+                    console.log('Format tidak dikenali, mencoba konversi dari objek');
+                    dataArray = []; 
+                }
+                
+                console.log('Data hari yang diproses:', dataArray);
+                setHariList(dataArray || []);
             } else {
-                setHariList([])
+                console.error('Response tidak mengandung data yang benar:', response);
+                setHariList([]);
             }
         } catch (err) {
-            console.error('Error saat mengambil data hari:', err)
+            console.error('Error saat mengambil data hari:', err);
+            
+            // Log detail error untuk debugging
+            if (err.response) {
+                console.log('Error response status:', err.response.status);
+                console.log('Error response data:', err.response.data);
+            } else if (err.request) {
+                console.log('Error request:', err.request);
+            } else {
+                console.log('Error message:', err.message);
+            }
+            
             // Error 401 sudah ditangani interceptor, hanya tampilkan pesan untuk error lain
             if (!err.response || err.response.status !== 401) {
-                setErrorHari('Gagal memuat data hari. Silakan coba lagi.')
+                setErrorHari('Gagal memuat data hari. Silakan coba lagi.');
             }
-            setHariList([]) // Set sebagai array kosong saat error
+            setHariList([]); // Set sebagai array kosong saat error
         } finally {
-            setLoadingHari(false)
+            setLoadingHari(false);
         }
-    }
+    };
 
     // Fungsi utilitas untuk menangani format waktu HH:MM:SS menjadi HH:MM
     const formatTime = (timeString) => {
@@ -316,20 +360,28 @@ export default function JadwalPage() {
             const formattedData = {
                 jam_mulai: formattedJamMulai,
                 jam_selesai: formattedJamSelesai,
-                deskripsi: sesiFormData.deskripsi || ''
+                deskripsi: sesiFormData.deskripsi || `Sesi ${formattedJamMulai}-${formattedJamSelesai}` // Default deskripsi jika kosong
             };
             
             console.log('Data sesi yang dikirim:', formattedData);
             
             let response;
             if (isEditSesi && selectedSesi) {
-                console.log('Updating sesi dengan ID:', selectedSesi.id);
-                // Update sesi yang ada - memastikan ID ada dan valid
-                if (!selectedSesi.id) {
+                // Pastikan ID yang digunakan valid
+                let sessionId = null;
+                if (typeof selectedSesi === 'object') {
+                    // Prioritaskan id_jam jika ada (sesuai model database)
+                    sessionId = selectedSesi.id_jam || selectedSesi.id || null;
+                } else {
+                    sessionId = selectedSesi;
+                }
+                
+                if (!sessionId) {
                     throw new Error('ID sesi tidak valid untuk update');
                 }
                 
-                response = await sessionService.update(selectedSesi.id, formattedData);
+                console.log(`Updating sesi dengan ID: ${sessionId}`);
+                response = await sessionService.update(sessionId, formattedData);
                 showSnackbar('Sesi berhasil diperbarui');
             } else {
                 // Tambah sesi baru
@@ -357,6 +409,8 @@ export default function JadwalPage() {
                 
                 if (err.response.status === 400) {
                     errorMessage = 'Format data tidak valid. Pastikan jam mulai dan jam selesai dalam format yang benar (HH:MM)';
+                } else if (err.response.status === 422) {
+                    errorMessage = 'Data tidak valid: ' + JSON.stringify(err.response.data.errors || err.response.data.message);
                 } else if (err.response.data?.message) {
                     errorMessage = err.response.data.message;
                 }

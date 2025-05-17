@@ -2,561 +2,333 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import UserLayout from '@/components/user/UserLayout';
+import { 
+    Box, 
+    Typography, 
+    Grid, 
+    Card, 
+    CardContent, 
+    Button, 
+    Divider, 
+    Chip,
+    Avatar,
+    List,
+    ListItem,
+    ListItemText,
+    ListItemAvatar,
+    Tabs,
+    Tab
+} from '@mui/material';
 import { bookingService } from '@/services/api';
-import {
-    Person,
-    CalendarMonth,
-    History,
-    Logout as LogoutIcon,
-    Menu as MenuIcon,
-    Dashboard as DashboardIcon,
-    EventAvailable,
-    Settings,
-    AccountCircle,
-    Close as CloseIcon,
-    Notifications,
-    Search,
-    LightMode,
-    DarkMode,
-    ChevronRight,
-    MonetizationOn,
-    Schedule,
-    Place
-} from '@mui/icons-material';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import SportsSoccerIcon from '@mui/icons-material/SportsSoccer';
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
+import NotificationsIcon from '@mui/icons-material/Notifications';
+import { useRouter } from 'next/navigation';
 
-const drawerWidth = 260;
-
-export default function CustomerDashboard() {
-    const { user, loading: authLoading, isAuthenticated, logout } = useAuth();
-    const router = useRouter();
-    const [activeTab, setActiveTab] = useState(0);
+export default function DashboardPage() {
+    const { user } = useAuth();
     const [bookings, setBookings] = useState([]);
+    const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [mobileOpen, setMobileOpen] = useState(false);
-    const [notificationAnchorEl, setNotificationAnchorEl] = useState(null);
-    const [profileAnchorEl, setProfileAnchorEl] = useState(null);
-
-    const handleNotificationOpen = (event) => setNotificationAnchorEl(event.currentTarget);
-    const handleNotificationClose = () => setNotificationAnchorEl(null);
-    const handleProfileOpen = (event) => setProfileAnchorEl(event.currentTarget);
-    const handleProfileClose = () => setProfileAnchorEl(null);
+    const [tabValue, setTabValue] = useState(0);
+    const router = useRouter();
 
     useEffect(() => {
-        if (!authLoading && !isAuthenticated) {
-            console.log('User not authenticated, redirecting to login');
-            router.replace('/login');
-        }
-    }, [authLoading, isAuthenticated, router]);
-
-    useEffect(() => {
-        const checkAuth = async () => {
+        const fetchData = async () => {
+            setLoading(true);
             try {
-                await bookingService.getUserBookings();
-            } catch (error) {
-                if (error.response && error.response.status === 401) {
-                    console.log('Token tidak valid, redirect ke login');
-                    logout();
-                    router.replace('/login');
+                // Fetch bookings data
+                const bookingsResponse = await bookingService.getUserBookings();
+                if (bookingsResponse && bookingsResponse.data && bookingsResponse.data.data) {
+                    setBookings(bookingsResponse.data.data);
                 }
-            }
-        };
 
-        if (!authLoading && isAuthenticated) {
-            checkAuth();
-        }
-    }, [authLoading, isAuthenticated, logout, router]);
-
-    useEffect(() => {
-        const fetchBookings = async () => {
-            if (!isAuthenticated || !user) return;
-
-            try {
-                setLoading(true);
-                setError('');
-                const response = await bookingService.getUserBookings();
-                setBookings(Array.isArray(response?.data) ? response.data : []);
+                // Mock notifications data
+                setNotifications([
+                    {
+                        id: 1,
+                        title: 'Booking dikonfirmasi',
+                        message: 'Booking lapangan Basket untuk tanggal 20/05/2023 jam 15:00 telah dikonfirmasi.',
+                        time: '2 jam yang lalu',
+                        read: false
+                    },
+                    {
+                        id: 2,
+                        title: 'Pembayaran diterima',
+                        message: 'Pembayaran untuk booking lapangan Futsal telah diterima.',
+                        time: '1 hari yang lalu',
+                        read: true
+                    },
+                    {
+                        id: 3,
+                        title: 'Pengingat jadwal',
+                        message: 'Jangan lupa jadwal booking Anda besok pukul 16:00 di lapangan Badminton.',
+                        time: '2 hari yang lalu',
+                        read: true
+                    }
+                ]);
             } catch (error) {
-                console.error('Error fetching bookings:', error);
-                setError('Gagal memuat data pesanan. Silakan coba lagi nanti.');
-                setBookings([]);
+                console.error('Error fetching data:', error);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchBookings();
-    }, [isAuthenticated, user]);
+        fetchData();
+    }, []);
 
-    const handleChangeTab = (event, newValue) => {
-        setActiveTab(newValue);
+    const formatDate = (dateString) => {
+        const options = { day: 'numeric', month: 'long', year: 'numeric' };
+        return new Date(dateString).toLocaleDateString('id-ID', options);
     };
 
-    const handleDrawerToggle = () => {
-        setMobileOpen(!mobileOpen);
-    };
-
-    const filteredBookings = bookings.filter(booking => {
-        if (!booking) return false;
-        const bookingDate = new Date(booking.date);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        return activeTab === 0 ? bookingDate >= today : bookingDate < today;
-    });
-
-    const getStatusColor = (status) => {
-        switch (status?.toLowerCase()) {
-            case 'menunggu pembayaran': return 'bg-yellow-100 text-yellow-800';
-            case 'dikonfirmasi': return 'bg-green-100 text-green-800';
-            case 'dibatalkan': return 'bg-red-100 text-red-800';
-            default: return 'bg-gray-100 text-gray-800';
-        }
-    };
-
-    const getMenuItemStyle = (isActive) =>
-        `rounded-lg mb-1 ${isActive ? 'bg-purple-100 text-purple-600 font-bold' : ''}`;
-
-    const drawer = (
-        <div className="flex flex-col h-full bg-white border-r-0">
-            <div className="flex items-center justify-between p-6">
-                <button
-                    className="text-gray-500 sm:hidden hover:text-gray-700"
-                    onClick={handleDrawerToggle}
-                >
-                    <CloseIcon />
-                </button>
-            </div>
-            <div className="border-t border-gray-200 opacity-50"></div>
-            <div className="px-6 mb-2">
-                <p className="text-xs font-bold text-gray-500 uppercase">Menu Utama</p>
-            </div>
-
-            <div className="flex-1 px-4">
-                <button
-                    className={`w-full flex items-center p-3 ${getMenuItemStyle(true)}`}
-                    onClick={() => router.push('/dashboard')}
-                >
-                    <DashboardIcon className="mr-3" />
-                    <span>Dashboard</span>
-                </button>
-
-                <button
-                    className={`w-full flex items-center p-3 ${getMenuItemStyle(false)}`}
-                    onClick={() => router.push('/booking')}
-                >
-                    <EventAvailable className="mr-3" />
-                    <span>Pesan Lapangan</span>
-                </button>
-
-                <div className="px-3 mt-8 mb-2">
-                    <p className="text-xs font-bold text-gray-500 uppercase">Akun</p>
-                </div>
-
-                <button
-                    className={`w-full flex items-center p-3 ${getMenuItemStyle(false)}`}
-                    onClick={() => router.push('/profile')}
-                >
-                    <AccountCircle className="mr-3" />
-                    <span>Profil Saya</span>
-                </button>
-
-                <button
-                    className={`w-full flex items-center p-3 ${getMenuItemStyle(false)}`}
-                    onClick={() => router.push('/settings')}
-                >
-                    <Settings className="mr-3" />
-                    <span>Pengaturan</span>
-                </button>
-            </div>
-
-            <div className="p-6">
-                <button
-                    className="w-full bg-[#F8F7FA] text-[#7367F0] rounded-lg py-2 px-4 flex items-center justify-center hover:bg-[#7367F0] hover:text-white transition-colors"
-                    onClick={() => logout()}
-                >
-                    <LogoutIcon className="mr-2" />
-                    Logout
-                </button>
-            </div>
-        </div>
-    );
-
-    if (authLoading) {
+    const getStatusChip = (status) => {
+        const statusMap = {
+            'pending': { label: 'Menunggu', color: 'warning' },
+            'confirmed': { label: 'Dikonfirmasi', color: 'info' },
+            'completed': { label: 'Selesai', color: 'success' },
+            'cancelled': { label: 'Dibatalkan', color: 'error' },
+            'paid': { label: 'Dibayar', color: 'primary' },
+            'unpaid': { label: 'Belum Dibayar', color: 'error' },
+        };
+        
+        const statusConfig = statusMap[status.toLowerCase()] || { label: status, color: 'default' };
+        
         return (
-            <div className="flex justify-center items-center h-screen bg-[#F4F5FA]">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#7367F0]"></div>
-            </div>
+            <Chip 
+                label={statusConfig.label} 
+                color={statusConfig.color} 
+                size="small" 
+                variant="outlined"
+            />
         );
-    }
+    };
 
-    if (!isAuthenticated) {
-        return null;
-    }
+    const handleTabChange = (event, newValue) => {
+        setTabValue(newValue);
+    };
+
+    const statsItems = [
+        {
+            icon: <CalendarTodayIcon sx={{ fontSize: 40 }} />,
+            title: 'Total Booking',
+            value: bookings.length.toString(),
+            color: 'primary.main'
+        },
+        {
+            icon: <AccessTimeIcon sx={{ fontSize: 40 }} />,
+            title: 'Jam Pemakaian',
+            value: `${bookings.length * 2}+`,
+            color: 'success.main'
+        },
+        {
+            icon: <SportsSoccerIcon sx={{ fontSize: 40 }} />,
+            title: 'Lapangan Favorit',
+            value: 'Futsal',
+            color: 'info.main'
+        },
+        {
+            icon: <AccountBalanceWalletIcon sx={{ fontSize: 40 }} />,
+            title: 'Total Pembayaran',
+            value: 'Rp 450.000',
+            color: 'secondary.main'
+        }
+    ];
 
     return (
-        <div className="flex bg-[#F4F5FA] min-h-screen">
-            {/* App Bar */}
-            <header className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm shadow-[rgba(115,103,240,0.1)]">
-                <div className="flex items-center h-16 px-4">
-                    <button
-                        className="mr-4 text-gray-500 sm:hidden hover:text-gray-700"
-                        onClick={handleDrawerToggle}
-                    >
-                        <MenuIcon />
-                    </button>
-                    <h1 className="flex-grow hidden text-lg font-semibold sm:block">Dashboard User</h1>
+        <UserLayout title="Dashboard">
+            {/* Welcome Message */}
+            <Card sx={{ mb: 3, overflow: 'hidden' }}>
+                <Box sx={{ 
+                    p: { xs: 3, md: 4 }, 
+                    background: 'linear-gradient(135deg, #7367f0 0%, #9e95f5 100%)',
+                    color: 'white'
+                }}>
+                    <Typography variant="h5" gutterBottom fontWeight="bold">
+                        Selamat Datang, {user?.name || 'Pengguna'}!
+                    </Typography>
+                    <Typography variant="body1">
+                        Kelola booking lapangan dan aktivitas olahraga Anda di sini.
+                    </Typography>
+                </Box>
+            </Card>
 
-                    {/* Search Bar */}
-                    <div className="flex-grow hidden max-w-md mx-4 md:flex">
-                        <div className="flex items-center p-2 rounded-full bg-[#F4F5FA] w-full">
-                            <Search className="mx-1 text-gray-500" />
-                            <input
-                                className="w-full text-sm bg-transparent border-none outline-none"
-                                placeholder="Cari..."
-                            />
-                        </div>
-                    </div>
+            {/* Stats Dashboard */}
+            <Grid container spacing={3} sx={{ mb: 3 }}>
+                {statsItems.map((item, index) => (
+                    <Grid item xs={6} md={3} key={index}>
+                        <Card>
+                            <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                                <Avatar sx={{ bgcolor: item.color, width: 56, height: 56, mb: 2 }}>
+                                    {item.icon}
+                                </Avatar>
+                                <Typography variant="body2" color="text.secondary" gutterBottom>
+                                    {item.title}
+                                </Typography>
+                                <Typography variant="h5" component="div" fontWeight="bold">
+                                    {item.value}
+                                </Typography>
+                            </CardContent>
+                        </Card>
+                    </Grid>
+                ))}
+            </Grid>
 
-                    {/* Icons */}
-                    <div className="flex items-center">
-                        <button className="text-gray-500 hover:text-gray-700">
-                            <LightMode />
-                        </button>
+            {/* Tabs for Bookings and Notifications */}
+            <Card>
+                <Tabs
+                    value={tabValue}
+                    onChange={handleTabChange}
+                    variant="fullWidth"
+                    sx={{ borderBottom: 1, borderColor: 'divider' }}
+                >
+                    <Tab label="Booking Anda" />
+                    <Tab 
+                        label={
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                Notifikasi
+                                {notifications.filter(n => !n.read).length > 0 && (
+                                    <Chip 
+                                        label={notifications.filter(n => !n.read).length} 
+                                        color="error" 
+                                        size="small" 
+                                        sx={{ ml: 1, height: 20, minWidth: 20 }} 
+                                    />
+                                )}
+                            </Box>
+                        } 
+                    />
+                </Tabs>
 
-                        <button
-                            className="ml-2 text-gray-500 hover:text-gray-700"
-                            onClick={handleNotificationOpen}
-                        >
-                            <div className="relative">
-                                <Notifications />
-                                <span className="absolute flex items-center justify-center w-4 h-4 text-xs text-white bg-red-500 rounded-full -top-1 -right-1">
-                                    3
-                                </span>
-                            </div>
-                        </button>
+                <Box sx={{ p: 2 }}>
+                    {/* Bookings Tab */}
+                    {tabValue === 0 && (
+                        <>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                <Typography variant="h6">Daftar Booking</Typography>
+                                <Button 
+                                    variant="contained" 
+                                    onClick={() => router.push('/booking')}
+                                    size="small"
+                                >
+                                    Booking Baru
+                                </Button>
+                            </Box>
 
-                        {/* Notifications Menu */}
-                        {notificationAnchorEl && (
-                            <div className="absolute right-0 z-50 mt-12 origin-top-right bg-white rounded-md shadow-lg w-80">
-                                <div className="p-4 border-b border-gray-200">
-                                    <h3 className="font-bold">Notifikasi</h3>
-                                    <p className="text-xs text-gray-500">Anda memiliki 3 pesan baru</p>
-                                </div>
-                                <div className="py-1">
-                                    <button
-                                        className="block w-full px-4 py-2 text-left hover:bg-gray-100"
-                                        onClick={handleNotificationClose}
+                            {loading ? (
+                                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-blue-500"></div>
+                                </Box>
+                            ) : bookings.length === 0 ? (
+                                <Box sx={{ textAlign: 'center', py: 4 }}>
+                                    <Typography variant="body1" color="text.secondary" gutterBottom>
+                                        Anda belum memiliki booking lapangan.
+                                    </Typography>
+                                    <Button 
+                                        variant="contained" 
+                                        onClick={() => router.push('/booking')}
+                                        sx={{ mt: 2 }}
                                     >
-                                        <p className="font-medium">Pembayaran Diterima</p>
-                                        <p className="text-xs text-gray-500">Pembayaran untuk pesanan #123 telah dikonfirmasi</p>
-                                    </button>
-                                    {/* More menu items... */}
-                                </div>
-                                <div className="p-2 text-center border-t border-gray-200">
-                                    <button className="text-sm text-[#7367F0]">Lihat Semua</button>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Profile */}
-                        <button
-                            className="flex items-center ml-3 hover:opacity-90"
-                            onClick={handleProfileOpen}
-                        >
-                            <div className="flex items-center justify-center w-10 h-10 text-purple-600 bg-purple-100 rounded-full">
-                                {user?.name?.charAt(0) || 'U'}
-                            </div>
-                            <div className="hidden ml-2 sm:block">
-                                <p className="text-sm font-medium">{user?.name || 'User'}</p>
-                                <p className="text-xs text-gray-500">{user?.role || 'Pelanggan'}</p>
-                            </div>
-                        </button>
-
-                        {/* Profile Menu */}
-                        {profileAnchorEl && (
-                            <div className="absolute right-0 z-50 w-56 mt-12 origin-top-right bg-white rounded-md shadow-lg">
-                                <div className="p-4 border-b border-gray-200">
-                                    <h3 className="font-bold">{user?.name || 'User'}</h3>
-                                    <p className="text-xs text-gray-500">{user?.email || 'email@example.com'}</p>
-                                </div>
-                                <div className="py-1">
-                                    <button
-                                        className="flex items-center w-full px-4 py-2 text-left hover:bg-gray-100"
-                                        onClick={() => { handleProfileClose(); router.push('/profile'); }}
-                                    >
-                                        <AccountCircle fontSize="small" className="mr-2" />
-                                        <span>Profil Saya</span>
-                                    </button>
-                                    {/* More menu items... */}
-                                </div>
-                                <div className="py-1 border-t border-gray-200">
-                                    <button
-                                        className="flex items-center w-full px-4 py-2 text-left hover:bg-gray-100"
-                                        onClick={() => { handleProfileClose(); logout(); }}
-                                    >
-                                        <LogoutIcon fontSize="small" className="mr-2" />
-                                        <span>Logout</span>
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </header>
-
-            {/* Side Drawer - Mobile */}
-            <div className={`fixed inset-0 z-40 sm:hidden ${mobileOpen ? 'block' : 'hidden'}`}>
-                <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={handleDrawerToggle}></div>
-                <div className="relative flex flex-col w-64 h-full bg-white shadow-xl">
-                    {drawer}
-                </div>
-            </div>
-
-            {/* Side Drawer - Desktop */}
-            <aside className="fixed flex-col hidden w-64 h-full bg-white shadow-sm sm:flex">
-                {drawer}
-            </aside>
-
-            {/* Main Content */}
-            <main className={`flex-1 p-6 ${drawerWidth ? `sm:ml-64` : ''} mt-16`}>
-                {/* Welcome Card */}
-                <div className="mb-6 rounded-xl bg-gradient-to-r from-[#7367F0] to-[#9e95f5] text-white relative overflow-hidden">
-                    <div className="relative z-10 flex items-center h-full p-6 sm:p-8">
-                        <div className="w-full md:w-8/12">
-                            <h1 className="mb-4 text-2xl font-bold leading-tight sm:text-3xl">
-                                Selamat Datang, {user?.name || 'Pelanggan'}!
-                            </h1>
-                            <p className="mb-4 opacity-90 text-sm sm:text-base max-w-[90%]">
-                                Kelola semua pesanan lapangan Anda di satu tempat. Anda memiliki{' '}
-                                <span className="font-bold">
-                                    {filteredBookings.filter(booking => booking?.status?.toLowerCase() === 'dikonfirmasi').length || 0}
-                                </span>{' '}
-                                pesanan aktif saat ini.
-                            </p>
-                            <button
-                                className="bg-white text-[#7367F0] font-bold py-2 px-6 rounded-lg shadow-md hover:bg-opacity-90 hover:-translate-y-0.5 transition-all text-sm"
-                                onClick={() => router.push('/booking')}
-                            >
-                                Pesan Lapangan
-                            </button>
-                        </div>
-                    </div>
-                    {/* Decorative elements */}
-                    <div className="absolute w-48 h-48 bg-white rounded-full -right-5 -bottom-8 bg-opacity-10"></div>
-                    <div className="absolute w-24 h-24 bg-white rounded-full right-10 -top-12 bg-opacity-10"></div>
-                </div>
-
-                {/* Statistics Cards */}
-                <h2 className="mb-4 text-xl font-bold">Ringkasan</h2>
-                <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 md:grid-cols-3">
-                    {/* Active Bookings Card */}
-                    <div className="overflow-hidden transition-shadow bg-white shadow-sm rounded-xl hover:shadow-md hover:-translate-y-1">
-                        <div className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                    <p className="text-sm text-gray-500">Pesanan Aktif</p>
-                                    <h3 className="my-2 text-2xl font-bold">
-                                        {filteredBookings.filter(b => b?.status?.toLowerCase() === 'dikonfirmasi').length || 0}
-                                    </h3>
-                                    <p className="text-xs text-gray-500">Jadwal terkonfirmasi</p>
-                                </div>
-                                <div className="flex items-center justify-center ml-3 text-purple-600 bg-purple-100 rounded-full w-14 h-14">
-                                    <EventAvailable />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="border-t border-gray-200"></div>
-                        <button
-                            className="flex items-center justify-between w-full p-3 hover:bg-gray-50"
-                            onClick={() => router.push('/bookings/active')}
-                        >
-                            <span className="text-sm font-medium text-[#7367F0]">Lihat Semua</span>
-                            <ChevronRight className="text-[#7367F0]" fontSize="small" />
-                        </button>
-                    </div>
-
-                    {/* Pending Payments Card */}
-                    <div className="overflow-hidden transition-shadow bg-white shadow-sm rounded-xl hover:shadow-md hover:-translate-y-1">
-                        <div className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                    <p className="text-sm text-gray-500">Menunggu Pembayaran</p>
-                                    <h3 className="my-2 text-2xl font-bold">
-                                        {filteredBookings.filter(b => b?.status?.toLowerCase() === 'menunggu pembayaran').length || 0}
-                                    </h3>
-                                    <p className="text-xs text-yellow-600">Perlu segera dibayar</p>
-                                </div>
-                                <div className="flex items-center justify-center ml-3 text-yellow-600 bg-yellow-100 rounded-full w-14 h-14">
-                                    <MonetizationOn />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="border-t border-gray-200"></div>
-                        <button
-                            className="flex items-center justify-between w-full p-3 hover:bg-gray-50"
-                            onClick={() => router.push('/bookings/pending')}
-                        >
-                            <span className="text-sm font-medium text-[#7367F0]">Lihat Semua</span>
-                            <ChevronRight className="text-[#7367F0]" fontSize="small" />
-                        </button>
-                    </div>
-
-                    {/* History Card */}
-                    <div className="overflow-hidden transition-shadow bg-white shadow-sm rounded-xl hover:shadow-md hover:-translate-y-1">
-                        <div className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                    <p className="text-sm text-gray-500">Total Riwayat</p>
-                                    <h3 className="my-2 text-2xl font-bold">{bookings.length || 0}</h3>
-                                    <p className="text-xs text-gray-500">Semua pesanan Anda</p>
-                                </div>
-                                <div className="flex items-center justify-center ml-3 text-green-600 bg-green-100 rounded-full w-14 h-14">
-                                    <History />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="border-t border-gray-200"></div>
-                        <button
-                            className="flex items-center justify-between w-full p-3 hover:bg-gray-50"
-                            onClick={() => router.push('/bookings/history')}
-                        >
-                            <span className="text-sm font-medium text-[#7367F0]">Lihat Riwayat</span>
-                            <ChevronRight className="text-[#7367F0]" fontSize="small" />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Bookings Section */}
-                <div className="mb-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-xl font-bold">Daftar Pesanan</h2>
-                        <div className="flex border-b border-gray-200">
-                            <button
-                                className={`flex items-center px-4 py-3 ${activeTab === 0 ? 'text-[#7367F0] border-b-2 border-[#7367F0]' : 'text-gray-500'}`}
-                                onClick={() => setActiveTab(0)}
-                            >
-                                <CalendarMonth className="mr-2" />
-                                <span>Mendatang</span>
-                            </button>
-                            <button
-                                className={`flex items-center px-4 py-3 ${activeTab === 1 ? 'text-[#7367F0] border-b-2 border-[#7367F0]' : 'text-gray-500'}`}
-                                onClick={() => setActiveTab(1)}
-                            >
-                                <History className="mr-2" />
-                                <span>Riwayat</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    {loading ? (
-                        <div className="flex justify-center mt-8">
-                            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#7367F0]"></div>
-                        </div>
-                    ) : error ? (
-                        <div className="p-4 mb-4 text-red-700 bg-red-100 border-l-4 border-red-500">
-                            <p>{error}</p>
-                        </div>
-                    ) : filteredBookings.length === 0 ? (
-                        <div className="p-8 text-center bg-white rounded-xl">
-                            <p className="text-gray-500">
-                                {activeTab === 0 ? 'Tidak ada pesanan mendatang' : 'Belum ada riwayat pesanan'}
-                            </p>
-                            <button
-                                className="mt-4 bg-[#7367F0] text-white py-2 px-4 rounded hover:bg-[#5d52d1] transition-colors"
-                                onClick={() => router.push('/booking')}
-                            >
-                                Buat Pesanan Baru
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            {filteredBookings.map((booking, index) => (
-                                <div key={index} className="overflow-hidden transition-shadow bg-white shadow-sm rounded-xl hover:shadow-md">
-                                    <div className="p-6">
-                                        <div className="flex items-start justify-between mb-4">
-                                            <div>
-                                                <h3 className="font-bold">{booking.fieldName || 'Lapangan Tidak Diketahui'}</h3>
-                                                <p className="text-sm text-gray-500">Kode Booking: #{booking.bookingCode || 'N/A'}</p>
-                                            </div>
-                                            <span className={`px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(booking.status)}`}>
-                                                {booking.status || 'Status Tidak Diketahui'}
-                                            </span>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 gap-4 mt-4 sm:grid-cols-2 md:grid-cols-4">
-                                            {/* Date */}
-                                            <div className="flex items-center">
-                                                <Schedule className="text-[#7367F0] mr-2" />
-                                                <div>
-                                                    <p className="text-xs text-gray-500">Tanggal</p>
-                                                    <p>
-                                                        {new Date(booking.date).toLocaleDateString('id-ID', {
-                                                            weekday: 'long',
-                                                            year: 'numeric',
-                                                            month: 'long',
-                                                            day: 'numeric'
-                                                        })}
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            {/* Time */}
-                                            <div className="flex items-center">
-                                                <Schedule className="text-[#7367F0] mr-2" />
-                                                <div>
-                                                    <p className="text-xs text-gray-500">Jam</p>
-                                                    <p>{booking.startTime} - {booking.endTime}</p>
-                                                </div>
-                                            </div>
-
-                                            {/* Location */}
-                                            <div className="flex items-center">
-                                                <Place className="text-[#7367F0] mr-2" />
-                                                <div>
-                                                    <p className="text-xs text-gray-500">Lokasi</p>
-                                                    <p>{booking.location || 'Lokasi Tidak Diketahui'}</p>
-                                                </div>
-                                            </div>
-
-                                            {/* Total */}
-                                            <div className="flex items-center">
-                                                <MonetizationOn className="text-[#7367F0] mr-2" />
-                                                <div>
-                                                    <p className="text-xs text-gray-500">Total</p>
-                                                    <p className="font-bold">
-                                                        {new Intl.NumberFormat('id-ID', {
-                                                            style: 'currency',
-                                                            currency: 'IDR'
-                                                        }).format(booking.totalPrice || 0)}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="border-t border-gray-200"></div>
-                                    <div className="flex justify-end p-4 space-x-2">
-                                        <button
-                                            className="border border-[#7367F0] text-[#7367F0] px-3 py-1 rounded text-sm hover:bg-[#7367F0] hover:text-white transition-colors"
-                                            onClick={() => router.push(`/bookings/${booking._id}`)}
-                                        >
-                                            Detail
-                                        </button>
-                                        {booking.status?.toLowerCase() === 'menunggu pembayaran' && (
-                                            <button
-                                                className="bg-[#7367F0] text-white px-3 py-1 rounded text-sm hover:bg-[#5d52d1] transition-colors"
-                                                onClick={() => router.push(`/payment/${booking._id}`)}
+                                        Booking Sekarang
+                                    </Button>
+                                </Box>
+                            ) : (
+                                <List sx={{ width: '100%' }}>
+                                    {bookings.map((booking, index) => (
+                                        <div key={booking.id}>
+                                            <ListItem 
+                                                alignItems="flex-start" 
+                                                sx={{ px: 0 }}
+                                                secondaryAction={getStatusChip(booking.status || 'pending')}
                                             >
-                                                Bayar Sekarang
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                                                <ListItemAvatar>
+                                                    <Avatar sx={{ bgcolor: 'primary.main' }}>
+                                                        <SportsSoccerIcon />
+                                                    </Avatar>
+                                                </ListItemAvatar>
+                                                <ListItemText
+                                                    primary={
+                                                        <Typography variant="subtitle1" fontWeight="medium">
+                                                            {booking.lapangan?.nama_lapangan || 'Lapangan'}
+                                                        </Typography>
+                                                    }
+                                                    secondary={
+                                                        <Box component="span" sx={{ display: 'block' }}>
+                                                            <Typography component="span" variant="body2" color="text.primary">
+                                                                {formatDate(booking.tanggal)}
+                                                            </Typography>
+                                                            <Typography component="span" variant="body2" color="text.secondary" sx={{ display: 'block' }}>
+                                                                {booking.sesi?.jam_mulai} - {booking.sesi?.jam_selesai}
+                                                            </Typography>
+                                                        </Box>
+                                                    }
+                                                />
+                                            </ListItem>
+                                            {index < bookings.length - 1 && <Divider variant="inset" component="li" />}
+                                        </div>
+                                    ))}
+                                </List>
+                            )}
+                        </>
                     )}
-                </div>
-            </main>
-        </div>
+
+                    {/* Notifications Tab */}
+                    {tabValue === 1 && (
+                        <>
+                            <Typography variant="h6" sx={{ mb: 2 }}>Notifikasi Terbaru</Typography>
+                            <List sx={{ width: '100%' }}>
+                                {notifications.map((notification, index) => (
+                                    <div key={notification.id}>
+                                        <ListItem 
+                                            alignItems="flex-start" 
+                                            sx={{ 
+                                                px: 0,
+                                                bgcolor: notification.read ? 'transparent' : 'rgba(0, 0, 0, 0.02)'
+                                            }}
+                                        >
+                                            <ListItemAvatar>
+                                                <Avatar sx={{ bgcolor: 'primary.main' }}>
+                                                    <NotificationsIcon />
+                                                </Avatar>
+                                            </ListItemAvatar>
+                                            <ListItemText
+                                                primary={
+                                                    <Typography variant="subtitle1" fontWeight="medium">
+                                                        {notification.title}
+                                                        {!notification.read && (
+                                                            <Chip 
+                                                                label="Baru" 
+                                                                color="primary" 
+                                                                size="small" 
+                                                                variant="outlined"
+                                                                sx={{ ml: 1, height: 18 }} 
+                                                            />
+                                                        )}
+                                                    </Typography>
+                                                }
+                                                secondary={
+                                                    <Box component="span" sx={{ display: 'block' }}>
+                                                        <Typography component="span" variant="body2" color="text.secondary">
+                                                            {notification.message}
+                                                        </Typography>
+                                                        <Typography component="span" variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                                                            {notification.time}
+                                                        </Typography>
+                                                    </Box>
+                                                }
+                                            />
+                                        </ListItem>
+                                        {index < notifications.length - 1 && <Divider variant="inset" component="li" />}
+                                    </div>
+                                ))}
+                            </List>
+                        </>
+                    )}
+                </Box>
+            </Card>
+        </UserLayout>
     );
 }
