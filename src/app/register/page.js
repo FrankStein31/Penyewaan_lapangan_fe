@@ -3,7 +3,14 @@
 import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
+import { Orbitron } from 'next/font/google';
+
+const orbitron = Orbitron({ 
+  weight: '600',
+  subsets: ['latin'],
+});
 
 export default function RegisterPage() {
     const [formData, setFormData] = useState({
@@ -96,22 +103,27 @@ export default function RegisterPage() {
                 <meta name="description" content="Halaman registrasi Sport Center" />
             </Head>
 
-            <div className="min-h-screen font-sans bg-gradient-to-br from-gray-900 to-gray-800">
+            <div className="min-h-screen font-sans bg-[#1a1a1a]">
                 <div className="container flex flex-col items-center justify-center min-h-screen px-4 py-8 mx-auto">
                     <div className="relative w-full max-w-md">
-                        {/* Efek dekoratif */}
-                        <div className="absolute inset-0 transform bg-blue-400 shadow-lg rounded-3xl -rotate-6"></div>
-                        <div className="absolute inset-0 transform bg-red-400 shadow-lg rounded-3xl rotate-6"></div>
-
                         {/* Kartu utama */}
-                        <div className="relative p-8 overflow-hidden shadow-xl bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl">
+                        <div className="relative p-8 overflow-hidden shadow-[20px_20px_60px_#0d0d0d,-20px_-20px_60px_#272727] bg-[#1a1a1a] rounded-3xl border border-[#2a2a2a]">
                             <div className="mb-8 text-center">
-                                <h1 className="text-3xl font-bold text-white">Registrasi</h1>
-                                <p className="mt-2 text-white">Buat akun baru untuk bergabung</p>
+                                <div className="flex justify-center mb-4">
+                                    <Image
+                                        src="/images/SIGMA.svg"
+                                        alt="SIGMA Logo"
+                                        width={120}
+                                        height={120}
+                                        className="drop-shadow-[0_0_15px_rgba(0,149,255,0.5)]"
+                                    />
+                                </div>
+                                <h1 className={`text-3xl font-bold text-[#00bfff] ${orbitron.className}`}>Registrasi</h1>   
+                                <p className="mt-2 text-gray-300">Buat akun baru untuk bergabung</p>
                             </div>
 
                             {error && (
-                                <div className="flex items-center p-3 mb-4 text-sm text-red-300 border rounded-md bg-red-900/50 backdrop-blur-sm border-red-700/50">
+                                <div className="flex items-center p-3 mb-4 text-sm text-red-300 border rounded-md bg-red-900/20 backdrop-blur-sm border-red-700/30">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0 w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
@@ -122,7 +134,7 @@ export default function RegisterPage() {
                             <form onSubmit={handleSubmit} className="space-y-4" noValidate>
                                 {/* Field nama */}
                                 <div>
-                                    <label htmlFor="name" className="block mb-1 text-sm font-medium text-white">
+                                    <label htmlFor="name" className="block mb-1 text-sm font-medium text-[#00bfff]">
                                         Nama Lengkap
                                     </label>
                                     <input
@@ -131,7 +143,7 @@ export default function RegisterPage() {
                                         type="text"
                                         autoComplete="name"
                                         required
-                                        className={`w-full px-4 py-3 transition-all border rounded-lg shadow-sm bg-gray-800/50 border-gray-700/50 focus:ring-2 focus:ring-blue-500/50 text-white focus:border-blue-500 placeholder-gray-400 ${errors.name ? 'border-red-500 focus:border-red-500 focus:ring-red-500/50' : ''}`}
+                                        className={`w-full px-4 py-3 transition-all rounded-lg shadow-[inset_5px_5px_10px_#0d0d0d,inset_-5px_-5px_10px_#272727] bg-[#1a1a1a] border-none text-white focus:ring-2 focus:ring-[#00bfff]/50 placeholder-gray-400 ${errors.name ? 'ring-2 ring-red-500' : ''}`}
                                         placeholder="Masukkan nama lengkap"
                                         value={formData.name}
                                         onChange={handleChange}
@@ -143,7 +155,7 @@ export default function RegisterPage() {
 
                                 {/* Field email */}
                                 <div>
-                                    <label htmlFor="email" className="block mb-1 text-sm font-medium text-white">
+                                    <label htmlFor="email" className="block mb-1 text-sm font-medium text-[#00bfff]">
                                         Alamat Email
                                     </label>
                                     <input
@@ -152,7 +164,7 @@ export default function RegisterPage() {
                                         type="email"
                                         autoComplete="email"
                                         required
-                                        className={`w-full px-4 py-3 transition-all border rounded-lg shadow-sm bg-gray-800/50 border-gray-700/50 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 placeholder-gray-400 ${errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500/50' : ''}`}
+                                        className={`w-full px-4 py-3 transition-all rounded-lg shadow-[inset_5px_5px_10px_#0d0d0d,inset_-5px_-5px_10px_#272727] bg-[#1a1a1a] border-none text-white focus:ring-2 focus:ring-[#00bfff]/50 placeholder-gray-400 ${errors.email ? 'ring-2 ring-red-500' : ''}`}
                                         placeholder="contoh@email.com"
                                         value={formData.email}
                                         onChange={handleChange}
@@ -164,7 +176,7 @@ export default function RegisterPage() {
 
                                 {/* Field telepon */}
                                 <div>
-                                    <label htmlFor="phone" className="block mb-1 text-sm font-medium text-white">
+                                    <label htmlFor="phone" className="block mb-1 text-sm font-medium text-[#00bfff]">
                                         Nomor Telepon
                                     </label>
                                     <input
@@ -173,7 +185,7 @@ export default function RegisterPage() {
                                         type="tel"
                                         autoComplete="tel"
                                         required
-                                        className={`w-full px-4 py-3 transition-all border rounded-lg shadow-sm bg-gray-800/50 border-gray-700/50 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 placeholder-gray-400 ${errors.phone ? 'border-red-500 focus:border-red-500 focus:ring-red-500/50' : ''}`}
+                                        className={`w-full px-4 py-3 transition-all rounded-lg shadow-[inset_5px_5px_10px_#0d0d0d,inset_-5px_-5px_10px_#272727] bg-[#1a1a1a] border-none text-white focus:ring-2 focus:ring-[#00bfff]/50 placeholder-gray-400 ${errors.phone ? 'ring-2 ring-red-500' : ''}`}
                                         placeholder="08xxxxxxxxxx"
                                         value={formData.phone}
                                         onChange={handleChange}
@@ -185,7 +197,7 @@ export default function RegisterPage() {
 
                                 {/* Field password */}
                                 <div>
-                                    <label htmlFor="password" className="block mb-1 text-sm font-medium text-white">
+                                    <label htmlFor="password" className="block mb-1 text-sm font-medium text-[#00bfff]">
                                         Kata Sandi
                                     </label>
                                     <div className="relative">
@@ -196,14 +208,14 @@ export default function RegisterPage() {
                                             autoComplete="new-password"
                                             required
                                             minLength="6"
-                                            className={`w-full px-4 py-3 pr-12 transition-all border rounded-lg shadow-sm bg-gray-800/50 border-gray-700/50 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 placeholder-gray-400 ${errors.password ? 'border-red-500 focus:border-red-500 focus:ring-red-500/50' : ''}`}
+                                            className={`w-full px-4 py-3 pr-12 transition-all rounded-lg shadow-[inset_5px_5px_10px_#0d0d0d,inset_-5px_-5px_10px_#272727] bg-[#1a1a1a] border-none text-white focus:ring-2 focus:ring-[#00bfff]/50 placeholder-gray-400 ${errors.password ? 'ring-2 ring-red-500' : ''}`}
                                             placeholder="Minimal 6 karakter"
                                             value={formData.password}
                                             onChange={handleChange}
                                         />
                                         <button
                                             type="button"
-                                            className="absolute text-gray-400 transition-colors transform -translate-y-1/2 right-3 top-1/2 hover:text-blue-300 focus:outline-none"
+                                            className="absolute text-gray-400 transition-colors transform -translate-y-1/2 right-3 top-1/2 hover:text-[#00bfff] focus:outline-none"
                                             onClick={() => setShowPassword(!showPassword)}
                                             aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
                                         >
@@ -226,7 +238,7 @@ export default function RegisterPage() {
 
                                 {/* Field konfirmasi password */}
                                 <div>
-                                    <label htmlFor="password_confirmation" className="block mb-1 text-sm font-medium text-white">
+                                    <label htmlFor="password_confirmation" className="block mb-1 text-sm font-medium text-[#00bfff]">
                                         Konfirmasi Kata Sandi
                                     </label>
                                     <div className="relative">
@@ -236,14 +248,14 @@ export default function RegisterPage() {
                                             type={showConfirmPassword ? 'text' : 'password'}
                                             autoComplete="new-password"
                                             required
-                                            className={`w-full px-4 py-3 pr-12 transition-all border rounded-lg shadow-sm bg-gray-800/50 border-gray-700/50 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 placeholder-gray-400 ${errors.password_confirmation ? 'border-red-500 focus:border-red-500 focus:ring-red-500/50' : ''}`}
+                                            className={`w-full px-4 py-3 pr-12 transition-all rounded-lg shadow-[inset_5px_5px_10px_#0d0d0d,inset_-5px_-5px_10px_#272727] bg-[#1a1a1a] border-none text-white focus:ring-2 focus:ring-[#00bfff]/50 placeholder-gray-400 ${errors.password_confirmation ? 'ring-2 ring-red-500' : ''}`}
                                             placeholder="Masukkan ulang kata sandi"
                                             value={formData.password_confirmation}
                                             onChange={handleChange}
                                         />
                                         <button
                                             type="button"
-                                            className="absolute text-gray-400 transition-colors transform -translate-y-1/2 right-3 top-1/2 hover:text-blue-300 focus:outline-none"
+                                            className="absolute text-gray-400 transition-colors transform -translate-y-1/2 right-3 top-1/2 hover:text-[#00bfff] focus:outline-none"
                                             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                             aria-label={showConfirmPassword ? 'Sembunyikan password' : 'Tampilkan password'}
                                         >
@@ -269,7 +281,7 @@ export default function RegisterPage() {
                                     <button
                                         type="submit"
                                         disabled={loading}
-                                        className={`w-full flex justify-center py-3 px-4 rounded-xl text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 focus:ring-offset-gray-800 transition-all duration-300 shadow-lg hover:shadow-blue-500/20 ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
+                                        className={`w-full flex justify-center py-3 px-4 rounded-xl text-sm font-medium text-white shadow-[5px_5px_10px_#0d0d0d,-5px_-5px_10px_#272727] hover:shadow-[inset_5px_5px_10px_#0d0d0d,inset_-5px_-5px_10px_#272727] bg-gradient-to-r from-[#00bfff] to-[#0080ff] focus:outline-none focus:ring-2 focus:ring-[#00bfff]/50 focus:ring-offset-2 focus:ring-offset-[#1a1a1a] transition-all duration-300 ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
                                     >
                                         {loading ? (
                                             <>
@@ -288,11 +300,11 @@ export default function RegisterPage() {
                             <div className="mt-6 text-sm text-center">
                                 <p className="text-gray-300">
                                     Sudah punya akun?{' '}
-                                    <Link href="/login" className="font-medium text-blue-400 transition-colors hover:text-blue-300">
+                                    <Link href="/login" className="font-medium text-[#00bfff] transition-colors hover:text-[#00a3e0]">
                                         Masuk disini
                                     </Link>
                                 </p>
-                                <Link href="/" className="block mt-2 text-sm text-blue-400 transition-colors hover:text-blue-300">
+                                <Link href="/" className="block mt-2 text-sm text-[#00bfff] transition-colors hover:text-[#00a3e0]">
                                     Kembali ke Beranda
                                 </Link>
                             </div>

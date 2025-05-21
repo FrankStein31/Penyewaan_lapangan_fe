@@ -18,7 +18,6 @@ export default function Home() {
       <Facilities />
       <Services />
       <Pricing />
-      <Testimonials />
       <Gallery />
       <Contact />
       <Footer />

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -24,19 +25,19 @@ export default function Navbar() {
       fixed top-0 left-0 right-0 z-50 
       transition-all duration-300 ease-in-out 
       ${isScrolled
-        ? 'bg-gradient-to-r from-gray-900 to-gray-800 backdrop-blur-md shadow-xl'
-        : 'bg-gradient-to-r from-red-400/90 to-blue-500/90'}
+        ? 'bg-[#101e3d] shadow-[inset_5px_5px_15px_#0a1429,_inset_-5px_-5px_15px_#162851]'
+        : 'bg-[#15294e] shadow-[inset_5px_5px_15px_#0f1d38,_inset_-5px_-5px_15px_#1b3564]'}
     `}>
       <div className="container flex items-center justify-between px-4 py-3 mx-auto">
         {/* Logo */}
         <Link href="/" className="flex items-center space-x-2 group">
-          <span className={`
-            text-2xl font-black tracking-tight 
-            ${isScrolled ? 'text-white' : 'text-white'}
-            group-hover:scale-105 transition-transform
-          `}>
-            SI Sport Center
-          </span>
+          <Image
+            src="/images/SIGMA.svg"
+            alt="SI Sport Center Logo"
+            width={150}
+            height={150}
+            className="group-hover:scale-105 group-hover:drop-shadow-[0_0_8px_#4d8dff] transition-all duration-300"
+          />
         </Link>
 
         {/* Desktop Navigation */}
@@ -55,9 +56,7 @@ export default function Navbar() {
                 className={`
                   font-semibold tracking-wide
                   transition-all duration-300 
-                  ${isScrolled
-                    ? 'text-gray-300 hover:text-white'
-                    : 'text-white/90 hover:text-white hover:scale-105'}
+                  text-blue-200 hover:text-white hover:text-shadow-[0_0_10px_#4d8dff]
                 `}
               >
                 {item.label}
@@ -69,11 +68,12 @@ export default function Navbar() {
             <Link
               href="/login"
               className={`
-                px-5 py-2 rounded-full font-bold tracking-wider
+                px-5 py-2 rounded-xl font-bold tracking-wider
                 transition-all duration-300 ease-in-out
-                ${isScrolled
-                  ? 'bg-gray-700 text-white hover:bg-gray-600 border border-gray-600'
-                  : 'bg-white/20 text-white border border-white/30 hover:bg-white/30'}
+                bg-[#162a51] text-blue-200
+                shadow-[3px_3px_6px_#0f1d38,_-3px_-3px_6px_#1b3564]
+                hover:shadow-[inset_3px_3px_6px_#0f1d38,_inset_-3px_-3px_6px_#1b3564]
+                hover:text-white
               `}
             >
               Login
@@ -82,11 +82,11 @@ export default function Navbar() {
             <Link
               href="/register"
               className={`
-                px-5 py-2 rounded-full font-bold tracking-wider
+                px-5 py-2 rounded-xl font-bold tracking-wider
                 transition-all duration-300 ease-in-out
-                ${isScrolled
-                  ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white hover:from-blue-700 hover:to-cyan-600'
-                  : 'bg-red-400 text-white hover:bg-red-500'}
+                bg-[#2442a1] text-white
+                shadow-[3px_3px_6px_#19327c,_-3px_-3px_6px_#2f52c6]
+                hover:shadow-[inset_3px_3px_6px_#19327c,_inset_-3px_-3px_6px_#2f52c6]
               `}
             >
               Daftar
@@ -99,9 +99,10 @@ export default function Navbar() {
           className={`
             md:hidden w-10 h-10 flex items-center justify-center
             rounded-full transition-all duration-300
-            ${isScrolled
-              ? 'text-gray-300 hover:bg-gray-700'
-              : 'text-white hover:bg-white/20'}
+            bg-[#162a51] text-blue-200
+            shadow-[3px_3px_6px_#0f1d38,_-3px_-3px_6px_#1b3564]
+            hover:shadow-[inset_3px_3px_6px_#0f1d38,_inset_-3px_-3px_6px_#1b3564]
+            hover:text-white
           `}
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           aria-label="Toggle Mobile Menu"
@@ -122,8 +123,8 @@ export default function Navbar() {
       {mobileMenuOpen && (
         <div className={`
           md:hidden absolute top-full left-0 w-full 
-          bg-gradient-to-b from-gray-900 to-gray-800 shadow-lg py-4 px-4
-          backdrop-blur-md
+          bg-[#101e3d] py-4 px-4
+          shadow-[inset_5px_5px_15px_#0a1429,_inset_-5px_-5px_15px_#162851]
         `}>
           <div className="flex flex-col space-y-4">
             {[
@@ -136,24 +137,24 @@ export default function Navbar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="px-3 py-2 font-medium text-gray-300 transition-all duration-300 rounded-md hover:text-white hover:bg-gray-700"
+                className="px-3 py-2 font-medium text-blue-200 transition-all duration-300 rounded-md hover:text-white hover:text-shadow-[0_0_10px_#4d8dff]"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {item.label}
               </Link>
             ))}
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 pt-2">
               <Link
                 href="/login"
-                className="w-full px-4 py-3 font-bold tracking-wider text-center text-white transition-all duration-300 bg-gray-700 rounded-full hover:bg-gray-600"
+                className="w-full px-4 py-3 font-bold tracking-wider text-center text-blue-200 transition-all duration-300 rounded-xl bg-[#162a51] shadow-[3px_3px_6px_#0f1d38,_-3px_-3px_6px_#1b3564] hover:shadow-[inset_3px_3px_6px_#0f1d38,_inset_-3px_-3px_6px_#1b3564] hover:text-white"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Login
               </Link>
               <Link
                 href="/register"
-                className="w-full px-4 py-3 font-bold tracking-wider text-center text-white transition-all duration-300 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600"
+                className="w-full px-4 py-3 font-bold tracking-wider text-center text-white transition-all duration-300 rounded-xl bg-[#2442a1] shadow-[3px_3px_6px_#19327c,_-3px_-3px_6px_#2f52c6] hover:shadow-[inset_3px_3px_6px_#19327c,_inset_-3px_-3px_6px_#2f52c6]"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Daftar

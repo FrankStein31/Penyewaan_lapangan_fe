@@ -3,8 +3,15 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { Orbitron } from 'next/font/google';
+
+const orbitron = Orbitron({ 
+  weight: '600',
+  subsets: ['latin'],
+});
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -14,6 +21,26 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const { login, loading } = useAuth();
   const router = useRouter();
+
+  // Tambahkan style untuk autofill
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      input:-webkit-autofill,
+      input:-webkit-autofill:hover,
+      input:-webkit-autofill:focus,
+      input:-webkit-autofill:active {
+        -webkit-text-fill-color:rgb(133, 133, 133) !important;
+        transition: background-color 5000s ease-in-out 0s;
+        background-color: #ffffff !important;
+        border-radius: 0.75rem !important;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -45,22 +72,34 @@ export default function LoginPage() {
         <meta name="description" content="Halaman login Sport Center" />
       </Head>
 
-      <div className="min-h-screen font-sans bg-gradient-to-br from-gray-900 to-gray-800">
+      <div className="min-h-screen font-sans bg-[#121212]">
         <div className="container flex flex-col items-center justify-center min-h-screen px-4 py-8 mx-auto">
           <div className="relative w-full max-w-md">
             {/* Efek dekoratif */}
-            <div className="absolute inset-0 transform bg-blue-400 shadow-lg rounded-3xl -rotate-6"></div>
-            <div className="absolute inset-0 transform bg-red-400 shadow-lg rounded-3xl rotate-6"></div>
+            <div className="absolute inset-0 transform bg-[#1a1a1a] shadow-lg rounded-3xl -rotate-6"></div>
+            <div className="absolute inset-0 transform bg-[#1e1e1e] shadow-lg rounded-3xl rotate-6"></div>
 
             {/* Kartu utama */}
-            <div className="relative p-8 overflow-hidden shadow-xl bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl">
+            <div className="relative p-8 overflow-hidden bg-[#181818] rounded-3xl shadow-[8px_8px_16px_#0a0a0a,_-8px_-8px_16px_#262626]">
               <div className="mb-8 text-center">
-                <h1 className="text-3xl font-bold text-white">Login</h1>
-                <p className="mt-2 text-white">Silakan masuk untuk melanjutkan</p>
+                <div className="flex justify-center mt-4 mb-10">
+                  <div className="relative">
+                    <div className="relative flex items-center justify-center w-full h-full">
+                      <Image
+                        src="/images/SIGMA.svg"
+                        alt="SIGMA Logo"
+                        width={200}
+                        height={200}
+                        className="object-contain animate-pulse filter drop-shadow-[0_0_8px_rgba(120,198,255,0.6)] hover:drop-shadow-[0_0_12px_rgba(120,198,255,0.8)] transition-all duration-300"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <h1 className={`text-3xl font-bold text-[#78c6ff] ${orbitron.className}`}>Login</h1>
               </div>
 
               {error && (
-                <div className="flex items-center p-3 mb-4 text-sm text-red-700 bg-red-100 rounded-md">
+                <div className="flex items-center p-3 mb-4 text-sm text-red-300 bg-[#251515] rounded-xl shadow-[inset_3px_3px_6px_#1a0e0e,_inset_-3px_-3px_6px_#301c1c]">
                   <svg xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0 w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -71,7 +110,7 @@ export default function LoginPage() {
               <form onSubmit={handleSubmit} className="space-y-6" noValidate>
                 {/* Field email */}
                 <div>
-                  <label htmlFor="email" className="block mb-1 text-sm font-medium text-white">
+                  <label htmlFor="email" className="block mb-2 text-sm font-medium text-[#a8dcff]">
                     Alamat Email
                   </label>
                   <input
@@ -80,7 +119,7 @@ export default function LoginPage() {
                     type="email"
                     autoComplete="email"
                     required
-                    className="w-full px-4 py-3 text-white transition-all border border-gray-200 rounded-lg shadow-sm bg-gradient-to-br from-gray-900 to-gray-800 focus:ring-2 focus:ring-blue-500 focus:bg-blue-50 focus:border-blue-400"
+                    className="w-full px-4 py-3 text-[#e1f4ff] rounded-xl bg-[#202020] border-none transition-all shadow-[inset_4px_4px_8px_#151515,_inset_-4px_-4px_8px_#2b2b2b] focus:shadow-[inset_5px_5px_10px_#151515,_inset_-3px_-3px_6px_#2b2b2b] focus:outline-none focus:ring-1 focus:ring-[#78c6ff] placeholder:text-[#666666]"
                     placeholder="contoh@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -89,11 +128,11 @@ export default function LoginPage() {
 
                 {/* Field password */}
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label htmlFor="password" className="block text-sm font-medium text-white">
+                  <div className="flex items-center justify-between mb-2">
+                    <label htmlFor="password" className="block text-sm font-medium text-[#a8dcff]">
                       Kata Sandi
                     </label>
-                    <Link href="/lupa-password" className="text-xs font-medium text-blue-600 hover:text-blue-500">
+                    <Link href="/lupa-password" className="text-xs font-medium text-[#78c6ff] hover:text-[#a8dcff]">
                       Lupa kata sandi?
                     </Link>
                   </div>
@@ -105,14 +144,14 @@ export default function LoginPage() {
                       autoComplete="current-password"
                       required
                       minLength="6"
-                      className="w-full px-4 py-3 pr-12 text-white transition-all border border-gray-200 rounded-lg shadow-sm bg-gradient-to-br from-gray-900 to-gray-800 focus:ring-2 focus:ring-blue-500 focus:bg-blue-50 focus:border-blue-400"
+                      className="w-full px-4 py-3 pr-12 text-[#e1f4ff] rounded-xl bg-[#202020] border-none transition-all shadow-[inset_4px_4px_8px_#151515,_inset_-4px_-4px_8px_#2b2b2b] focus:shadow-[inset_5px_5px_10px_#151515,_inset_-3px_-3px_6px_#2b2b2b] focus:outline-none focus:ring-1 focus:ring-[#78c6ff] placeholder:text-[#666666]"
                       placeholder="Masukkan kata sandi"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                     />
                     <button
                       type="button"
-                      className="absolute text-gray-500 transform -translate-y-1/2 right-3 top-1/2 hover:text-gray-700 focus:outline-none"
+                      className="absolute text-[#78c6ff] transform -translate-y-1/2 right-3 top-1/2 hover:text-[#a8dcff] focus:outline-none"
                       onClick={() => setShowPassword(!showPassword)}
                       aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
                     >
@@ -132,15 +171,24 @@ export default function LoginPage() {
 
                 {/* Ingat saya */}
                 <div className="flex items-center">
-                  <input
-                    id="rememberMe"
-                    name="rememberMe"
-                    type="checkbox"
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                  />
-                  <label htmlFor="rememberMe" className="block ml-2 text-sm text-white">
+                  <div className="relative flex items-center">
+                    <input
+                      id="rememberMe"
+                      name="rememberMe"
+                      type="checkbox"
+                      className="w-5 h-5 rounded-md appearance-none bg-[#202020] shadow-[inset_2px_2px_3px_#151515,_inset_-2px_-2px_3px_#2b2b2b] checked:bg-[#4a9eda] focus:outline-none focus:ring-1 focus:ring-[#78c6ff]"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                    />
+                    <span className="absolute text-white pointer-events-none left-1 top-0.5">
+                      {rememberMe && (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </span>
+                  </div>
+                  <label htmlFor="rememberMe" className="block ml-2 text-sm text-[#a8dcff]">
                     Ingat saya
                   </label>
                 </div>
@@ -150,7 +198,10 @@ export default function LoginPage() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className={`w-full flex justify-center py-3 px-4 rounded-xl text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 focus:ring-offset-gray-800 transition-all duration-300 shadow-lg hover:shadow-blue-500/20 ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
+                    className={`w-full flex justify-center py-3 px-4 rounded-xl text-sm font-medium text-white
+                    bg-[#4a9eda] shadow-[4px_4px_8px_#378ac1,_-4px_-4px_8px_#5db2f3]
+                    hover:shadow-[inset_4px_4px_8px_#378ac1,_inset_-4px_-4px_8px_#5db2f3]
+                    transition-all duration-300 ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
                   >
                     {loading ? (
                       <>
@@ -165,56 +216,12 @@ export default function LoginPage() {
                 </div>
               </form>
 
-              {/* Pembatas login sosial */}
-              <div className="mt-6">
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-300"></div>
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-2 text-white bg-gradient-to-br from-gray-900 to-gray-800">
-                      Atau masuk menggunakan
-                    </span>
-                  </div>
-                </div>
-
-                {/* Tombol login sosial */}
-                <div className="grid grid-cols-2 gap-3 mt-6">
-                  <button
-                    type="button"
-                    onClick={() => handleLoginSosial('Facebook')}
-                    disabled={loading}
-                    className={`inline-flex justify-center w-full px-4 py-2 text-sm font-medium text-white transition-all bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-300 shadow-sm rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
-                  >
-                    <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                      <path fillRule="evenodd" d="M20 10c0-5.523-4.477-10-10-10S0 4.477 0 10c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V10h2.54V7.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V10h2.773l-.443 2.89h-2.33v6.988C16.343 19.128 20 14.991 20 10z" clipRule="evenodd" />
-                    </svg>
-                    <span className="ml-2">Facebook</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleLoginSosial('Google')}
-                    disabled={loading}
-                    className={`inline-flex justify-center w-full px-4 py-2 text-sm font-medium text-white transition-all bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-300 shadow-sm rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
-                  >
-                    <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-                      <path d="M1 1h22v22H1z" fill="none" />
-                    </svg>
-                    <span className="ml-2">Google</span>
-                  </button>
-                </div>
-              </div>
-
+                
               {/* Link pendaftaran */}
               <div className="mt-6 text-sm text-center">
-                <p className="text-white">
+                <p className="text-[#a8dcff]">
                   Belum punya akun?{' '}
-                  <Link href="/daftar" className="font-medium text-blue-600 hover:text-blue-500">
+                  <Link href="/register" className="font-medium text-[#78c6ff] hover:text-[#a8dcff]">
                     Daftar sekarang
                   </Link>
                 </p>

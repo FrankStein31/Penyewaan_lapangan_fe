@@ -19,7 +19,7 @@ export function AuthProvider({ children }) {
         // Hindari pemeriksaan berulang jika sudah dilakukan
         if (authChecked) return;
 
-        const checkAuth = async () => {
+        const checkAuth = async () => { 
             try {
                 setLoading(true);
                 // Coba mendapatkan data user dari API
