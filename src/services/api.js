@@ -338,8 +338,8 @@ export const bookingService = {
 
     // Mendapatkan pemesanan user yang login
     getUserBookings: async () => {
-        // Gunakan endpoint /pemesanan biasa saja karena server sudah melakukan filter berdasarkan ID user
-        return axiosInstance.get('/pemesanan');
+        // Gunakan endpoint khusus user bookings
+        return axiosInstance.get('/pemesanan/user');
     },
 
     // Cek ketersediaan lapangan untuk tanggal tertentu
