@@ -2,7 +2,7 @@ import Hero from "@/sections/Hero";
 import About from "@/sections/About";
 import Facilities from "@/sections/Facilities";
 import Services from "@/sections/Services";
-import Pricing from "@/sections/Pricing";
+import LapanganTerlaris from "@/sections/LapanganTerlaris";
 import Testimonials from "@/sections/Testimonials";
 import Gallery from "@/sections/Gallery";
 import Contact from "@/sections/Contact";
@@ -17,7 +17,8 @@ export default function Home() {
       <About />
       <Facilities />
       <Services />
-      <Pricing />
+      <LapanganTerlaris />
+      <Testimonials />
       <Gallery />
       <Contact />
       <Footer />

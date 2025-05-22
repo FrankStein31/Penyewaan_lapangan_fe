@@ -70,7 +70,6 @@ export default function UserLayout({ children, title = "Dashboard" }) {
                 }
             }
         };
-
         if (!loading && isAuthenticated) {
             verifyToken();
         }
