@@ -13,8 +13,8 @@ export default function About() {
                     <span className="inline-block px-4 py-1 mb-3 text-xs font-semibold tracking-wider text-blue-400 uppercase rounded-full bg-blue-900/30">
                         Tentang Kami
                     </span>
-                    <h2 className="mb-4 text-3xl font-bold text-transparent md:text-5xl bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">
-                        Tentang Sport Center
+                    <h2 className="mb-4 text-3xl font-bold text-center text-white md:text-4xl lg:text-5xl">
+                        Tentang <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-cyan-400">Sport Center</span>
                     </h2>
                     <div className="w-16 h-1 mx-auto rounded-full bg-gradient-to-r from-blue-500 to-cyan-500"></div>
                 </div>

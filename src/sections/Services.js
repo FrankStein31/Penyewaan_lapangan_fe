@@ -100,9 +100,11 @@ export default function Services() {
                     <span className="inline-block px-4 py-1 mb-4 text-xs font-semibold tracking-wider text-blue-400 uppercase rounded-full bg-blue-900/30">
                         Our Services
                     </span>
-                    <h2 className="mb-3 text-3xl font-bold text-transparent md:text-4xl lg:text-5xl bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">
-                        Layanan <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-blue-500">Premium</span> Kami
+                    <h2 className="mb-4 text-3xl font-bold text-center text-white md:text-4xl lg:text-5xl">
+                        Layanan <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-cyan-400">Kami</span>
                     </h2>
+
+
                     <div className="w-16 h-1 mx-auto rounded-full bg-gradient-to-r from-blue-500 to-cyan-500"></div>
                     <p className="max-w-2xl mx-auto mt-4 text-gray-300 md:text-lg">
                         Solusi lengkap untuk kebutuhan kesehatan dan kebugaran Anda
@@ -114,19 +116,17 @@ export default function Services() {
                     {services.map((service, index) => (
                         <div
                             key={index}
-                            className="relative p-6 transition-all duration-500 ease-in-out border rounded-xl group hover:-translate-y-2 border-gray-700/50 bg-gray-800/50 hover:bg-gray-800/70 hover:shadow-2xl backdrop-blur-sm"
+                            className="relative p-6 transition-all duration-500 ease-in-out border rounded-xl group hover:-translate-y-2 border-gray-700/50 bg-gray-800/80 hover:bg-gray-800/90 hover:shadow-2xl backdrop-blur-sm ring-4 ring-green-500/10"
                         >
                             {/* Glow effect */}
-                            <div className={`absolute inset-0 bg-gradient-to-br ${service.glowColor} opacity-0 group-hover:opacity-100 rounded-xl transition-opacity duration-500`}></div>
+                            <div className={`absolute inset-0 bg-gradient-to-br ${service.glowColor} opacity-0 group-hover:opacity-100 
+                            rounded-xl transition-opacity duration-500`}></div>
 
                             <div className="relative">
-                                {/* Icon Container */}
-                                <div className="flex items-center justify-center w-16 h-16 mx-auto mb-5 transition-colors rounded-xl bg-blue-900/30 group-hover:bg-blue-900/50">
+                                <div className="flex items-center justify-center w-16 h-16 mx-auto mb-5 transition-colors rounded-xl bg-green-900/30 group-hover:bg-green-900/50">
                                     {service.icon}
                                 </div>
-
-                                {/* Content */}
-                                <h3 className="mb-3 text-xl font-semibold text-center text-white transition-colors group-hover:text-blue-300">
+                                <h3 className="mb-3 text-xl font-semibold text-center text-white transition-colors group-hover:text-green-300">
                                     {service.title}
                                 </h3>
                                 <p className="text-center text-gray-300">
@@ -139,16 +139,19 @@ export default function Services() {
 
                 {/* CTA Button */}
                 <div className="mt-12 text-center">
-                    <button className="relative px-8 py-3 font-medium text-white transition-all duration-300 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 hover:shadow-lg hover:shadow-blue-500/30">
-                        <div className="absolute inset-0 transition-opacity duration-300 rounded-lg opacity-0 bg-gradient-to-r from-blue-400 to-cyan-400 hover:opacity-100"></div>
+                    <button className="relative px-8 py-3 font-semibold text-white transition-all duration-300 rounded-lg shadow-md bg-gradient-to-r from-green-500 to-cyan-500 hover:from-green-600 hover:to-cyan-600 hover:shadow-lg hover:shadow-green-500/30">
+                        <div className="absolute inset-0 transition-opacity duration-300 rounded-lg opacity-0 bg-gradient-to-r from-green-400 to-cyan-400 group-hover:opacity-100"></div>
                         <span className="relative flex items-center justify-center">
                             Explore All Services
                             <svg className="w-4 h-4 ml-2 -mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd"></path>
+                                <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 
+                        01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 
+                        010-1.414z" clipRule="evenodd"></path>
                             </svg>
                         </span>
                     </button>
                 </div>
+
             </div>
         </section>
     );

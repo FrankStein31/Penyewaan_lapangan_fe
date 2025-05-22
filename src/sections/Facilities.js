@@ -74,8 +74,8 @@ export default function Facilities() {
                     <span className="inline-block px-4 py-1 mb-3 text-xs font-semibold tracking-wider text-green-400 uppercase rounded-full bg-green-900/30">
                         Fasilitas Unggulan
                     </span>
-                    <h2 className="mb-4 text-3xl font-bold text-center text-transparent md:text-4xl bg-clip-text bg-gradient-to-r from-green-400 to-cyan-400">
-                        Fasilitas Kami
+                    <h2 className="mb-4 text-3xl font-bold text-center text-white md:text-4xl lg:text-5xl">
+                        Fasilitas <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-cyan-400">Kami</span>
                     </h2>
                     <p className="max-w-3xl mx-auto text-lg leading-relaxed text-center text-gray-300 md:text-xl">
                         Kami menyediakan berbagai fasilitas olahraga modern dengan standar internasional untuk memberikan pengalaman terbaik bagi Anda.
