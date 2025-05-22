@@ -86,91 +86,46 @@ export default function BookingPage() {
       // Tampilkan loading atau feedback
       setLoading(true);
       
-      // Buat array untuk menyimpan semua respons booking
-      const bookingResponses = [];
-      const errorResponses = [];
+      // Kumpulkan semua ID sesi yang dipilih
+      const selectedSessionIds = selectedTimeSlots.map(slot => slot.id_jam || slot.id_sesi || slot.id);
       
-      // Loop melalui setiap time slot yang dipilih dan buat booking terpisah
-      for (const timeSlot of selectedTimeSlots) {
-        try {
-          // Siapkan data untuk API
-          const bookingData = {
-            id_lapangan: selectedField.id,
-            id_sesi: timeSlot.id_jam || timeSlot.id_sesi || timeSlot.id,
-            tanggal: formatDateForAPI(selectedDate),
-            // Data tambahan untuk membantu aplikasi
-            nama_pelanggan: bookingForm.name,
-            email: bookingForm.email,
-            no_hp: bookingForm.phone,
-            catatan: bookingForm.notes,
-          };
-          
-          console.log("Mengirim data booking:", bookingData);
-          
-          // Kirim request ke API
-          const response = await bookingService.create(bookingData);
-          bookingResponses.push(response);
-        } catch (slotError) {
-          console.error("Error saat booking sesi:", timeSlot, slotError);
-          errorResponses.push({
-            timeSlot,
-            error: slotError.response?.data?.message || "Terjadi kesalahan saat membuat booking"
-          });
-        }
-      }
+      // Siapkan data untuk API
+      const bookingData = {
+        id_lapangan: selectedField.id,
+        id_sesi: selectedSessionIds, // Kirim array id_sesi
+        tanggal: formatDateForAPI(selectedDate),
+        nama_pelanggan: bookingForm.name,
+        email: bookingForm.email,
+        no_hp: bookingForm.phone,
+        catatan: bookingForm.notes,
+      };
       
-      console.log("Semua respons booking:", bookingResponses);
+      console.log("Mengirim data booking:", bookingData);
       
-      if (errorResponses.length > 0) {
-        console.error("Beberapa sesi gagal dibooking:", errorResponses);
-        
-        if (bookingResponses.length > 0) {
-          // Berhasil booking sebagian sesi
-          alert(`${bookingResponses.length} sesi berhasil dibooking, namun ${errorResponses.length} sesi gagal: ${errorResponses.map(e => e.error).join(", ")}`);
-          
-          // Reset form dan selected slots
-          setBookingForm({
-            name: "",
-            phone: "",
-            email: "",
-            team: "",
-            participants: "",
-            notes: "",
-            paymentMethod: "transfer"
-          });
-          setSelectedTimeSlots([]);
-          
-          // Close modal
-          setShowBookingModal(false);
-          
-          // Redirect ke dashboard untuk melihat booking yang berhasil
-          router.push('/dashboard');
-        } else {
-          // Semua booking gagal
-          alert(`Booking gagal: ${errorResponses.map(e => e.error).join(", ")}`);
-        }
-      } else {
-        // Semua booking berhasil
-        alert(`${selectedTimeSlots.length} sesi booking berhasil dibuat! Silakan cek halaman dashboard untuk melihat booking Anda.`);
-        
-        // Close modal
-        setShowBookingModal(false);
-        
-        // Reset form dan selected slots
-        setBookingForm({
-          name: "",
-          phone: "",
-          email: "",
-          team: "",
-          participants: "",
-          notes: "",
-          paymentMethod: "transfer"
-        });
-        setSelectedTimeSlots([]);
-        
-        // Redirect ke halaman dashboard
-        router.push('/dashboard');
-      }
+      // Kirim request ke API
+      const response = await bookingService.create(bookingData);
+      console.log("Respons booking:", response);
+      
+      // Booking berhasil
+      alert("Booking berhasil dibuat! Silakan cek halaman dashboard untuk melihat booking Anda.");
+      
+      // Close modal
+      setShowBookingModal(false);
+      
+      // Reset form dan selected slots
+      setBookingForm({
+        name: "",
+        phone: "",
+        email: "",
+        team: "",
+        participants: "",
+        notes: "",
+        paymentMethod: "transfer"
+      });
+      setSelectedTimeSlots([]);
+      
+      // Redirect ke halaman dashboard
+      router.push('/dashboard');
       
     } catch (error) {
       console.error("Error creating booking:", error);

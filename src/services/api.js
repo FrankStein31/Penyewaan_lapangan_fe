@@ -373,6 +373,12 @@ export const bookingService = {
             throw new Error('Data pemesanan tidak lengkap. id_lapangan, tanggal, dan id_sesi wajib diisi.');
         }
 
+        // Pastikan id_sesi adalah array
+        if (!Array.isArray(id_sesi)) {
+            bookingData.id_sesi = [id_sesi]; // Konversi ke array jika bukan array
+            console.log('id_sesi dikonversi ke array:', bookingData.id_sesi);
+        }
+
         // Kirim semua data yang tersedia ke API
         return axiosInstance.post('/pemesanan', bookingData);
     },
