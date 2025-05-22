@@ -5,8 +5,6 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import UserLayout from '@/components/user/UserLayout'
 import { Box, Typography, Card, CardContent, Grid, Button, Tab, Tabs, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material'
-import Sidebar from '@/components/user/Sidebar'
-import Topbar from '@/components/user/Topbar'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import PaymentStatusBadge from '@/components/user/PaymentStatusBadge'
 import SkeletonLoader from '@/components/common/SkeletonLoader'
@@ -39,25 +37,25 @@ export default function PaymentsPage() {
     fetchPayments()
   }, [])
 
-    const fetchPayments = async () => {
+  const fetchPayments = async () => {
     setLoading(true)
     try {
       const response = await paymentService.getUserPayments()
       console.log('Data pembayaran:', response.data)
-      
+
       if (response && response.data) {
         setPayments(response.data)
       } else {
         setPayments([])
       }
-        setError(null)
-      } catch (err) {
+      setError(null)
+    } catch (err) {
       console.error('Error fetching payments:', err)
-        setError('Gagal memuat data pembayaran. Silakan coba lagi.')
-      } finally {
-        setLoading(false)
-      }
+      setError('Gagal memuat data pembayaran. Silakan coba lagi.')
+    } finally {
+      setLoading(false)
     }
+  }
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue)
@@ -124,10 +122,10 @@ export default function PaymentsPage() {
       formData.append('id_pembayaran', uploadDialog.payment.id)
 
       await paymentService.uploadPaymentProof(formData)
-      
+
       alert('Bukti pembayaran berhasil diunggah')
       handleCloseUploadDialog()
-    fetchPayments()
+      fetchPayments()
     } catch (err) {
       console.error('Error uploading payment proof:', err)
       alert('Gagal mengunggah bukti pembayaran. Silakan coba lagi.')
@@ -229,7 +227,7 @@ export default function PaymentsPage() {
             </Box>
           ) : filteredPayments.length === 0 ? (
             <EmptyState
-              title="Tidak ada data pembayaran" 
+              title="Tidak ada data pembayaran"
               message="Belum ada data pembayaran yang tersedia."
             />
           ) : (
@@ -283,7 +281,7 @@ export default function PaymentsPage() {
                       >
                         Detail
                       </Button>
-                      
+
                       {payment.status === 'pending' && (
                         <Button
                           variant="contained"
@@ -294,7 +292,7 @@ export default function PaymentsPage() {
                           Upload Bukti
                         </Button>
                       )}
-                      
+
                       {payment.status === 'paid' && (
                         <Button
                           variant="outlined"
@@ -374,17 +372,17 @@ export default function PaymentsPage() {
                   {detailDialog.payment.schedule || 'Jadwal tidak tersedia'}
                 </Typography>
               </Grid>
-              
+
               {detailDialog.payment.status === 'paid' && (
                 <Grid item xs={12}>
                   <Typography variant="body2" color="text.secondary">
                     Bukti Pembayaran
                   </Typography>
                   <Box sx={{ mt: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
-                    <img 
-                      src="/sample-payment-proof.jpg" 
-                      alt="Bukti Pembayaran" 
-                      style={{ width: '100%', height: 'auto', display: 'block' }} 
+                    <img
+                      src="/sample-payment-proof.jpg"
+                      alt="Bukti Pembayaran"
+                      style={{ width: '100%', height: 'auto', display: 'block' }}
                     />
                   </Box>
                 </Grid>
@@ -417,7 +415,7 @@ export default function PaymentsPage() {
               <Typography variant="subtitle1" gutterBottom>
                 Detail Pembayaran
               </Typography>
-              
+
               <Grid container spacing={2} sx={{ mb: 3 }}>
                 <Grid item xs={6}>
                   <Typography variant="body2" color="text.secondary">
@@ -440,7 +438,7 @@ export default function PaymentsPage() {
               <Typography variant="subtitle1" gutterBottom>
                 Informasi Rekening
               </Typography>
-              
+
               <Box sx={{ mb: 3, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
                 <Typography variant="body2" gutterBottom>
                   Silakan transfer sesuai jumlah yang tertera ke rekening berikut:
@@ -456,7 +454,7 @@ export default function PaymentsPage() {
               <Typography variant="subtitle1" gutterBottom>
                 Upload Bukti Transfer
               </Typography>
-              
+
               <Box sx={{ mb: 3 }}>
                 <input
                   accept="image/*"
@@ -474,11 +472,11 @@ export default function PaymentsPage() {
                     Pilih File
                   </Button>
                 </label>
-                
+
                 <Typography variant="body2" color="text.secondary">
                   {uploadDialog.file ? uploadDialog.file.name : 'Belum ada file dipilih'}
                 </Typography>
-                
+
                 {uploadDialog.file && (
                   <Box sx={{ mt: 2, maxWidth: '100%', maxHeight: 200, overflow: 'hidden' }}>
                     <img

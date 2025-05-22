@@ -117,22 +117,22 @@ export const sessionService = {
     getAll: async () => {
         return axiosInstance.get('/sesi');
     },
-    
+
     // Alias untuk getAll demi kompatibilitas
     getSessions: async () => {
         return axiosInstance.get('/sesi');
     },
-    
+
     // Mendapatkan sesi waktu berdasarkan id
     getById: async (id) => {
         return axiosInstance.get(`/sesi/${id}`);
     },
-    
+
     // Membuat sesi waktu baru
     create: async (sessionData) => {
         return axiosInstance.post('/sesi', sessionData);
     },
-    
+
     // Update sesi waktu
     update: async (id, sessionData) => {
         // Pastikan ID dalam format yang benar
@@ -140,7 +140,7 @@ export const sessionService = {
         console.log(`Update sesi dengan ID: ${sessionId}`, sessionData);
         return axiosInstance.put(`/sesi/${sessionId}`, sessionData);
     },
-    
+
     // Hapus sesi waktu
     delete: async (id) => {
         const sessionId = typeof id === 'number' ? id.toString() : id;
@@ -341,7 +341,7 @@ export const bookingService = {
         // Gunakan endpoint /pemesanan biasa saja karena server sudah melakukan filter berdasarkan ID user
         return axiosInstance.get('/pemesanan');
     },
-    
+
     // Cek ketersediaan lapangan untuk tanggal tertentu
     checkAvailability: async (id_lapangan, tanggal) => {
         // Pastikan kedua parameter ada dan valid
@@ -352,36 +352,36 @@ export const bookingService = {
 
         // Convert id_lapangan ke string jika itu adalah angka
         const fieldId = typeof id_lapangan === 'number' ? id_lapangan.toString() : id_lapangan;
-        
+
         console.log('Sending availability check request with params:', { id_lapangan: fieldId, tanggal });
-        
-        return axiosInstance.get('/pemesanan/check-availability', { 
-            params: { 
-                id_lapangan: fieldId, 
-                tanggal 
-            } 
+
+        return axiosInstance.get('/pemesanan/check-availability', {
+            params: {
+                id_lapangan: fieldId,
+                tanggal
+            }
         });
     },
-    
+
     // Membuat pemesanan baru
     create: async (bookingData) => {
         console.log('Mengirim data pemesanan ke API:', bookingData);
-        
+
         // Memastikan semua parameter wajib tersedia
         const { id_lapangan, tanggal, id_sesi } = bookingData;
         if (!id_lapangan || !tanggal || !id_sesi) {
             throw new Error('Data pemesanan tidak lengkap. id_lapangan, tanggal, dan id_sesi wajib diisi.');
         }
-        
+
         // Kirim semua data yang tersedia ke API
         return axiosInstance.post('/pemesanan', bookingData);
     },
-    
+
     // Update pemesanan (misal: update status)
     update: async (id, bookingData) => {
         return axiosInstance.put(`/pemesanan/${id}`, bookingData);
     },
-    
+
     // Hapus pemesanan
     delete: async (id) => {
         return axiosInstance.delete(`/pemesanan/${id}`);
