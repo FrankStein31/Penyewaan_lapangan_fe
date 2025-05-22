@@ -3,7 +3,6 @@ import About from "@/sections/About";
 import Facilities from "@/sections/Facilities";
 import Services from "@/sections/Services";
 import LapanganTerlaris from "@/sections/LapanganTerlaris";
-import Testimonials from "@/sections/Testimonials";
 import Gallery from "@/sections/Gallery";
 import Contact from "@/sections/Contact";
 import Navbar from "@/components/common/Navbar";
@@ -18,7 +17,6 @@ export default function Home() {
       <Facilities />
       <Services />
       <LapanganTerlaris />
-      <Testimonials />
       <Gallery />
       <Contact />
       <Footer />
