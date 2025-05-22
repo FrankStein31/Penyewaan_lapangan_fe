@@ -434,12 +434,25 @@ export async function getUserNotifications() {
     ]
 }
 
+
+//poto profile user
 export async function getUserProfile() {
-    // Simulasi data dari backend
     return {
-        name: 'Ahmad Santoso',
-        email: 'ahmad@example.com',
-        phone: '08123456789',
-        address: 'Jl. Melati No. 123, Jakarta Selatan',
+        name: 'Bayu Gilang P.',
+        email: 'user@example.com',
+        phone: '081234567890',
+        photoUrl: '/images/profile.jpg',
+        type: 'user',
     }
 }
+
+export async function updateUserProfile(data) {
+    console.log('Update profile with:', data)
+    return { success: true }
+}
+
+export async function updateUserPhoto(formData) {
+    console.log('Upload photo with:', formData.get('photo'))
+    return { success: true }
+}
+
