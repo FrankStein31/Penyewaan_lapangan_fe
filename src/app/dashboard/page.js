@@ -35,6 +35,9 @@ export default function DashboardPage() {
     const [loading, setLoading] = useState(true);
     const [tabValue, setTabValue] = useState(0);
     const router = useRouter();
+    const [totalPayment, setTotalPayment] = useState(0);
+    const [favoriteField, setFavoriteField] = useState('');
+    const [totalHours, setTotalHours] = useState(0);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -43,7 +46,38 @@ export default function DashboardPage() {
                 // Fetch bookings data
                 const bookingsResponse = await bookingService.getUserBookings();
                 if (bookingsResponse && bookingsResponse.data && bookingsResponse.data.data) {
-                    setBookings(bookingsResponse.data.data);
+                    const bookingsData = bookingsResponse.data.data;
+                    setBookings(bookingsData);
+                    
+                    // Hitung total pembayaran
+                    const total = bookingsData.reduce((sum, booking) => sum + (parseFloat(booking.totalPrice) || 0), 0);
+                    setTotalPayment(total);
+                    
+                    // Hitung total jam
+                    const hours = bookingsData.reduce((sum, booking) => {
+                        // Asumsi setiap sesi adalah 1 jam
+                        return sum + 1;
+                    }, 0);
+                    setTotalHours(hours);
+                    
+                    // Tentukan lapangan favorit berdasarkan frekuensi booking
+                    const fieldCounts = {};
+                    bookingsData.forEach(booking => {
+                        const fieldName = booking.fieldName || '';
+                        fieldCounts[fieldName] = (fieldCounts[fieldName] || 0) + 1;
+                    });
+                    
+                    // Cari lapangan dengan jumlah booking terbanyak
+                    let maxCount = 0;
+                    let favField = '';
+                    Object.entries(fieldCounts).forEach(([field, count]) => {
+                        if (count > maxCount) {
+                            maxCount = count;
+                            favField = field;
+                        }
+                    });
+                    
+                    setFavoriteField(favField || 'Belum ada');
                 }
 
                 // Mock notifications data
@@ -111,6 +145,16 @@ export default function DashboardPage() {
         setTabValue(newValue);
     };
 
+    // Format currency 
+    const formatCurrency = (value) => {
+        return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(value);
+    };
+
     const statsItems = [
         {
             icon: <CalendarTodayIcon sx={{ fontSize: 40 }} />,
@@ -121,19 +165,19 @@ export default function DashboardPage() {
         {
             icon: <AccessTimeIcon sx={{ fontSize: 40 }} />,
             title: 'Jam Pemakaian',
-            value: `${bookings.length * 2}+`,
+            value: `${totalHours}+`,
             color: 'success.main'
         },
         {
             icon: <SportsSoccerIcon sx={{ fontSize: 40 }} />,
             title: 'Lapangan Favorit',
-            value: 'Futsal',
+            value: favoriteField,
             color: 'info.main'
         },
         {
             icon: <AccountBalanceWalletIcon sx={{ fontSize: 40 }} />,
             title: 'Total Pembayaran',
-            value: 'Rp 450.000',
+            value: formatCurrency(totalPayment),
             color: 'secondary.main'
         }
     ];

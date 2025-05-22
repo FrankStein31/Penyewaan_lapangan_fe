@@ -13,6 +13,7 @@ import NavigateBeforeIcon from "@mui/icons-material/NavigateBefore";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import CloseIcon from "@mui/icons-material/Close";
 import axios from "axios";
+import { useRouter } from "next/navigation";
 
 export default function BookingPage() {
   const [fields, setFields] = useState([]);
@@ -27,7 +28,7 @@ export default function BookingPage() {
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState(null);
+  const [selectedTimeSlots, setSelectedTimeSlots] = useState([]);
   const [bookingForm, setBookingForm] = useState({
     name: "",
     phone: "",
@@ -39,6 +40,7 @@ export default function BookingPage() {
   });
   const [error, setError] = useState(null);
   const [showSessionsModal, setShowSessionsModal] = useState(false);
+  const router = useRouter();
 
   // Fungsi untuk memformat tanggal menjadi string yyyy-mm-dd untuk API
   const formatDateForAPI = (date) => {
@@ -75,79 +77,148 @@ export default function BookingPage() {
       return;
     }
     
+    if (selectedTimeSlots.length === 0) {
+      alert("Mohon pilih setidaknya satu sesi waktu");
+      return;
+    }
+
     try {
       // Tampilkan loading atau feedback
       setLoading(true);
       
-      // Siapkan data untuk API
-      const bookingData = {
-        id_lapangan: selectedField.id,
-        id_sesi: selectedTimeSlot.id_jam || selectedTimeSlot.id_sesi || selectedTimeSlot.id,
-        tanggal: formatDateForAPI(selectedDate),
-        // Data tambahan untuk membantu aplikasi
-        nama_pelanggan: bookingForm.name,
-        email: bookingForm.email,
-        no_hp: bookingForm.phone,
-        catatan: bookingForm.notes,
-      };
+      // Buat array untuk menyimpan semua respons booking
+      const bookingResponses = [];
+      const errorResponses = [];
       
-      console.log("Mengirim data booking:", bookingData);
+      // Loop melalui setiap time slot yang dipilih dan buat booking terpisah
+      for (const timeSlot of selectedTimeSlots) {
+        try {
+          // Siapkan data untuk API
+          const bookingData = {
+            id_lapangan: selectedField.id,
+            id_sesi: timeSlot.id_jam || timeSlot.id_sesi || timeSlot.id,
+            tanggal: formatDateForAPI(selectedDate),
+            // Data tambahan untuk membantu aplikasi
+            nama_pelanggan: bookingForm.name,
+            email: bookingForm.email,
+            no_hp: bookingForm.phone,
+            catatan: bookingForm.notes,
+          };
+          
+          console.log("Mengirim data booking:", bookingData);
+          
+          // Kirim request ke API
+          const response = await bookingService.create(bookingData);
+          bookingResponses.push(response);
+        } catch (slotError) {
+          console.error("Error saat booking sesi:", timeSlot, slotError);
+          errorResponses.push({
+            timeSlot,
+            error: slotError.response?.data?.message || "Terjadi kesalahan saat membuat booking"
+          });
+        }
+      }
       
-      // Kirim request ke API
-      const response = await bookingService.create(bookingData);
+      console.log("Semua respons booking:", bookingResponses);
       
-      console.log("Response booking:", response);
-      
-      // Tampilkan sukses
-      alert("Booking berhasil dibuat! Silakan cek halaman dashboard untuk melihat booking Anda.");
-      
-      // Close modal
-      setShowBookingModal(false);
-      
-      // Reset form
-      setBookingForm({
-        name: "",
-        phone: "",
-        email: "",
-        team: "",
-        participants: "",
-        notes: "",
-        paymentMethod: "transfer"
-      });
-      
-      // Refresh data lapangan
-      fetchFieldsWithAvailability();
+      if (errorResponses.length > 0) {
+        console.error("Beberapa sesi gagal dibooking:", errorResponses);
+        
+        if (bookingResponses.length > 0) {
+          // Berhasil booking sebagian sesi
+          alert(`${bookingResponses.length} sesi berhasil dibooking, namun ${errorResponses.length} sesi gagal: ${errorResponses.map(e => e.error).join(", ")}`);
+          
+          // Reset form dan selected slots
+          setBookingForm({
+            name: "",
+            phone: "",
+            email: "",
+            team: "",
+            participants: "",
+            notes: "",
+            paymentMethod: "transfer"
+          });
+          setSelectedTimeSlots([]);
+          
+          // Close modal
+          setShowBookingModal(false);
+          
+          // Redirect ke dashboard untuk melihat booking yang berhasil
+          router.push('/dashboard');
+        } else {
+          // Semua booking gagal
+          alert(`Booking gagal: ${errorResponses.map(e => e.error).join(", ")}`);
+        }
+      } else {
+        // Semua booking berhasil
+        alert(`${selectedTimeSlots.length} sesi booking berhasil dibuat! Silakan cek halaman dashboard untuk melihat booking Anda.`);
+        
+        // Close modal
+        setShowBookingModal(false);
+        
+        // Reset form dan selected slots
+        setBookingForm({
+          name: "",
+          phone: "",
+          email: "",
+          team: "",
+          participants: "",
+          notes: "",
+          paymentMethod: "transfer"
+        });
+        setSelectedTimeSlots([]);
+        
+        // Redirect ke halaman dashboard
+        router.push('/dashboard');
+      }
       
     } catch (error) {
       console.error("Error creating booking:", error);
       
       // Tampilkan pesan error
-      if (error.response && error.response.data && error.response.data.message) {
-        alert(`Booking gagal: ${error.response.data.message}`);
-      } else {
-        alert("Terjadi kesalahan saat membuat booking. Silakan coba lagi.");
+      let errorMessage = "Terjadi kesalahan saat membuat booking. Silakan coba lagi.";
+      
+      if (error.response) {
+        console.error("Full error response:", error.response);
+        if (error.response.data && error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response.data && error.response.data.error) {
+          errorMessage = error.response.data.error;
+        }
       }
+      
+      alert(`Booking gagal: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
   };
 
-  // Fungsi untuk membuka modal booking
-  const openBookingModal = (field, timeSlot) => {
-    console.log("Data lapangan:", field);
-    console.log("Data slot waktu yang dipilih:", timeSlot);
-    console.log("Waktu mulai mentah:", timeSlot.jam_mulai);
-    console.log("Waktu selesai mentah:", timeSlot.jam_selesai);
+  // Fungsi untuk menangani saat sesi waktu dipilih
+  const handleSessionSelect = (session) => {
+    // Cek apakah sesi sudah dipilih (toggle)
+    const isSelected = selectedTimeSlots.some(s => s.id === session.id);
     
-    // Pastikan format waktu konsisten - tampilkan waktu asli dari database
-    if (timeSlot.jam_mulai && timeSlot.jam_selesai) {
-      // Simpan format waktu asli
-      timeSlot.originalStartTime = timeSlot.jam_mulai;
-      timeSlot.originalEndTime = timeSlot.jam_selesai;
+    if (isSelected) {
+      // Hapus sesi dari daftar yang dipilih
+      setSelectedTimeSlots(selectedTimeSlots.filter(s => s.id !== session.id));
+    } else {
+      // Tambahkan sesi ke daftar yang dipilih
+      setSelectedTimeSlots([...selectedTimeSlots, session]);
+    }
+  };
+
+  // Fungsi untuk membuka modal booking
+  const openBookingModal = (field) => {
+    if (selectedTimeSlots.length === 0) {
+      alert("Mohon pilih setidaknya satu sesi waktu terlebih dahulu");
+      return;
     }
     
+    console.log("Data lapangan:", field);
+    console.log("Data slot waktu yang dipilih:", selectedTimeSlots);
+    
     setSelectedField(field);
-    setSelectedTimeSlot(timeSlot);
+    setShowSessionsModal(false);
     setShowBookingModal(true);
   };
 
@@ -925,15 +996,37 @@ export default function BookingPage() {
         <Box sx={{ 
           p: 3, 
           background: 'linear-gradient(135deg, #7367f0 0%, #9e95f5 100%)',
-          color: 'white'
+          color: 'white',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
         }}>
-          <Typography variant="h6" fontWeight="bold">
-            Sesi Tersedia
-          </Typography>
-          {selectedField && (
-            <Typography variant="subtitle1">
-              {selectedField.nama} - {formatDate(selectedDate)} ({getDayName(selectedDate)})
+          <div>
+            <Typography variant="h6" fontWeight="bold">
+              Pilih Sesi
             </Typography>
+            {selectedField && (
+              <Typography variant="subtitle1">
+                {selectedField.nama} - {formatDate(selectedDate)} ({getDayName(selectedDate)})
+              </Typography>
+            )}
+          </div>
+          {selectedTimeSlots.length > 0 && (
+            <Button 
+              variant="contained" 
+              color="success"
+              onClick={() => openBookingModal(selectedField)}
+              sx={{
+                bgcolor: 'white',
+                color: '#7367f0',
+                fontWeight: 'bold',
+                '&:hover': {
+                  bgcolor: 'rgba(255,255,255,0.9)',
+                }
+              }}
+            >
+              Lanjut Booking ({selectedTimeSlots.length})
+            </Button>
           )}
         </Box>
         <DialogContent sx={{ pt: 3 }}>
@@ -957,46 +1050,71 @@ export default function BookingPage() {
               ) : (
                 <>
                   <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                    Pilih sesi yang ingin Anda booking:
+                    Pilih satu atau lebih sesi yang ingin Anda booking:
                   </Typography>
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 2 }}>
-                    {availableSessions.map((session) => (
-                      <Button
-                        key={session.id}
-                        variant="outlined"
-                        onClick={() => {
-                          setSelectedTimeSlot(session);
-                          setShowSessionsModal(false);
-                          setShowBookingModal(true);
-                        }}
-                        disabled={!session.tersedia}
-                        sx={{
-                          minWidth: '120px',
-                          borderRadius: '8px',
-                          py: 1.5,
-                          borderColor: session.tersedia ? 'primary.main' : 'grey.300',
-                          color: session.tersedia ? 'primary.main' : 'grey.500',
-                          backgroundColor: session.tersedia ? 'transparent' : 'grey.100',
-                          '&:hover': {
-                            backgroundColor: session.tersedia ? 'primary.light' : 'grey.200',
-                            color: session.tersedia ? 'white' : 'grey.600',
-                            borderColor: session.tersedia ? 'primary.light' : 'grey.300',
-                          },
-                          position: 'relative',
-                          '&::after': !session.tersedia ? {
-                            content: '"Dipesan"',
-                            position: 'absolute',
-                            bottom: '2px',
-                            right: '3px',
-                            fontSize: '8px',
-                            color: 'error.main',
-                            fontWeight: 'bold'
-                          } : {}
-                        }}
-                      >
-                        {session.formatted_start} - {session.formatted_end}
-                      </Button>
-                    ))}
+                    {availableSessions.map((session) => {
+                      // Cek apakah sesi ini telah dipilih
+                      const isSelected = selectedTimeSlots.some(s => s.id === session.id);
+                      
+                      return (
+                        <Button
+                          key={session.id}
+                          variant={isSelected ? "contained" : "outlined"}
+                          onClick={() => handleSessionSelect(session)}
+                          disabled={!session.tersedia}
+                          sx={{
+                            minWidth: '120px',
+                            borderRadius: '8px',
+                            py: 1.5,
+                            borderColor: !session.tersedia 
+                              ? 'grey.300' 
+                              : isSelected 
+                                ? 'primary.main' 
+                                : 'primary.main',
+                            color: !session.tersedia 
+                              ? 'grey.500' 
+                              : isSelected 
+                                ? 'white' 
+                                : 'primary.main',
+                            backgroundColor: !session.tersedia 
+                              ? 'grey.100' 
+                              : isSelected 
+                                ? 'primary.main' 
+                                : 'transparent',
+                            '&:hover': {
+                              backgroundColor: !session.tersedia 
+                                ? 'grey.200' 
+                                : isSelected 
+                                  ? 'primary.dark' 
+                                  : 'primary.light',
+                              color: !session.tersedia 
+                                ? 'grey.600' 
+                                : isSelected 
+                                  ? 'white' 
+                                  : 'white',
+                              borderColor: !session.tersedia 
+                                ? 'grey.300' 
+                                : isSelected 
+                                  ? 'primary.dark' 
+                                  : 'primary.light',
+                            },
+                            position: 'relative',
+                            '&::after': !session.tersedia ? {
+                              content: '"Dipesan"',
+                              position: 'absolute',
+                              bottom: '2px',
+                              right: '3px',
+                              fontSize: '8px',
+                              color: 'error.main',
+                              fontWeight: 'bold'
+                            } : {}
+                          }}
+                        >
+                          {session.formatted_start} - {session.formatted_end}
+                        </Button>
+                      )
+                    })}
                   </Box>
                 </>
               )}
@@ -1029,14 +1147,12 @@ export default function BookingPage() {
           </Typography>
           {selectedField && (
             <Typography variant="subtitle1" color="text.secondary">
-              {selectedField.nama} - {selectedTimeSlot && 
-                `${selectedTimeSlot.formatted_start} - ${selectedTimeSlot.formatted_end}`
-              }
+              {selectedField.nama} - {formatDate(selectedDate)} ({getDayName(selectedDate)})
             </Typography>
           )}
         </DialogTitle>
         <DialogContent>
-          {selectedField && selectedTimeSlot && (
+          {selectedField && selectedTimeSlots.length > 0 && (
             <Box sx={{ mb: 3 }}>
               <Card sx={{ mb: 3, overflow: 'hidden' }}>
                 <Box sx={{ 
@@ -1076,26 +1192,41 @@ export default function BookingPage() {
                     </Grid>
                     <Grid item xs={12} sm={6}>
                       <Typography variant="body2" color="text.secondary">
+                        Jumlah Sesi
+                      </Typography>
+                      <Typography variant="body1" fontWeight="medium">
+                        {selectedTimeSlots.length} sesi
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="body2" color="text.secondary">
                         Sesi Waktu
                       </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                        {selectedTimeSlots.map((slot, index) => (
+                          <Chip 
+                            key={index} 
+                            label={`${slot.formatted_start} - ${slot.formatted_end}`}
+                            color="primary"
+                            size="small"
+                          />
+                        ))}
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">
+                        Total Durasi
+                      </Typography>
                       <Typography variant="body1" fontWeight="medium">
-                        {selectedTimeSlot.formatted_start} - {selectedTimeSlot.formatted_end}
+                        {selectedTimeSlots.reduce((acc, slot) => acc + (slot.durasi || 1), 0)} jam
                       </Typography>
                     </Grid>
                     <Grid item xs={12} sm={6}>
                       <Typography variant="body2" color="text.secondary">
-                        Durasi
-                      </Typography>
-                      <Typography variant="body1" fontWeight="medium">
-                        {selectedTimeSlot.durasi || 1} jam
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <Typography variant="body2" color="text.secondary">
-                        Harga
+                        Total Harga
                       </Typography>
                       <Typography variant="body1" fontWeight="medium" color="primary.main">
-                        Rp {parseInt(selectedTimeSlot.total_harga || selectedField.harga).toLocaleString()}
+                        Rp {selectedTimeSlots.reduce((acc, slot) => acc + parseInt(slot.total_harga || selectedField.harga || 0), 0).toLocaleString()}
                       </Typography>
                     </Grid>
                   </Grid>
