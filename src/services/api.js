@@ -14,15 +14,41 @@ const axiosInstance = axios.create({
     }
 });
 
-// Menambahkan interceptor untuk menangani error 401
-axiosInstance.interceptors.response.use(
-    (response) => response,
+// Add request interceptor
+axiosInstance.interceptors.request.use(
+    (config) => {
+        console.log('Request:', {
+            method: config.method,
+            url: config.url,
+            data: config.data,
+            headers: config.headers
+        });
+        return config;
+    },
     (error) => {
-        // Jika error 401 (Unauthorized), arahkan ke halaman login
-        if (error.response && error.response.status === 401) {
-            console.log('Session habis atau tidak terotentikasi, redirect ke login');
+        console.error('Request Error:', error);
+        return Promise.reject(error);
+    }
+);
 
-            // Hapus data autentikasi dari localStorage
+// Add response interceptor
+axiosInstance.interceptors.response.use(
+    (response) => {
+        console.log('Response:', {
+            status: response.status,
+            data: response.data
+        });
+        return response;
+    },
+    (error) => {
+        console.error('Response Error:', {
+            status: error.response?.status,
+            data: error.response?.data,
+            message: error.message
+        });
+        
+        // Jika error 401 (Unauthorized)
+        if (error.response?.status === 401) {
             if (typeof window !== 'undefined') {
                 localStorage.removeItem('user');
                 localStorage.removeItem('token');
@@ -47,6 +73,7 @@ axiosInstance.interceptors.response.use(
                 }
             }
         }
+        
         return Promise.reject(error);
     }
 );
@@ -324,22 +351,39 @@ export const statusService = {
     }
 };
 
-// Booking (Pemesanan) pada services/api.js
+// Booking (Pemesanan) services
 export const bookingService = {
     // Mendapatkan semua pemesanan
     getAll: async () => {
-        return axiosInstance.get('/pemesanan');
+        try {
+            const response = await axiosInstance.get('/pemesanan');
+            return response;
+        } catch (error) {
+            console.error('Error in getAll bookings:', error);
+            throw error;
+        }
     },
 
     // Mendapatkan pemesanan berdasarkan id
     getById: async (id) => {
-        return axiosInstance.get(`/pemesanan/${id}`);
+        try {
+            const response = await axiosInstance.get(`/pemesanan/${id}`);
+            return response;
+        } catch (error) {
+            console.error('Error in getById booking:', error);
+            throw error;
+        }
     },
 
     // Mendapatkan pemesanan user yang login
     getUserBookings: async () => {
-        // Gunakan endpoint /pemesanan biasa saja karena server sudah melakukan filter berdasarkan ID user
-        return axiosInstance.get('/pemesanan');
+        try {
+            const response = await axiosInstance.get('/pemesanan/user');
+            return response;
+        } catch (error) {
+            console.error('Error in getUserBookings:', error);
+            throw error;
+        }
     },
 
     // Cek ketersediaan lapangan untuk tanggal tertentu
@@ -373,18 +417,59 @@ export const bookingService = {
             throw new Error('Data pemesanan tidak lengkap. id_lapangan, tanggal, dan id_sesi wajib diisi.');
         }
 
+        // Pastikan id_sesi adalah array
+        if (!Array.isArray(id_sesi)) {
+            bookingData.id_sesi = [id_sesi]; // Konversi ke array jika bukan array
+            console.log('id_sesi dikonversi ke array:', bookingData.id_sesi);
+        }
+
         // Kirim semua data yang tersedia ke API
         return axiosInstance.post('/pemesanan', bookingData);
     },
 
     // Update pemesanan (misal: update status)
     update: async (id, bookingData) => {
-        return axiosInstance.put(`/pemesanan/${id}`, bookingData);
+        try {
+            const response = await axiosInstance.put(`/pemesanan/${id}`, bookingData);
+            return response;
+        } catch (error) {
+            console.error('Error in update booking:', error);
+            throw error;
+        }
     },
 
     // Hapus pemesanan
     delete: async (id) => {
-        return axiosInstance.delete(`/pemesanan/${id}`);
+        try {
+            const response = await axiosInstance.delete(`/pemesanan/${id}`);
+            return response;
+        } catch (error) {
+            console.error('Error in delete booking:', error);
+            throw error;
+        }
+    },
+
+    getPaymentToken: async (bookingId) => {
+        const response = await axiosInstance.post(`/pemesanan/${bookingId}/payment`);
+        return response.data;
+    },
+
+    checkPaymentStatus: async (bookingId) => {
+        const response = await axiosInstance.get(`/pemesanan/${bookingId}/payment/status`);
+        return response.data;
+    },
+
+    // Verifikasi pemesanan
+    verify: async (id, isApproved) => {
+        try {
+            const response = await axiosInstance.put(`/pemesanan/${id}/verify`, {
+                status: isApproved ? 'diverifikasi' : 'ditolak'
+            });
+            return response;
+        } catch (error) {
+            console.error('Error in verify booking:', error);
+            throw error;
+        }
     }
 };
 
@@ -413,6 +498,28 @@ export const paymentService = {
     // Hapus pembayaran
     delete: async (id) => {
         return axiosInstance.delete(`/pembayaran/${id}`);
+    },
+
+    // Midtrans payment
+    createPayment: async (bookingId) => {
+        try {
+            const response = await axiosInstance.post(`/pemesanan/${bookingId}/payment`);
+            return response.data;
+        } catch (error) {
+            console.error('Error creating payment:', error);
+            throw error;
+        }
+    },
+
+    // Check payment status
+    checkStatus: async (bookingId) => {
+        try {
+            const response = await axiosInstance.get(`/pemesanan/${bookingId}/payment/status`);
+            return response.data;
+        } catch (error) {
+            console.error('Error checking payment status:', error);
+            throw error;
+        }
     }
 };
 

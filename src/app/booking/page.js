@@ -44,18 +44,32 @@ export default function BookingPage() {
 
   // Fungsi untuk memformat tanggal menjadi string yyyy-mm-dd untuk API
   const formatDateForAPI = (date) => {
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
+    // Pastikan kita menggunakan UTC untuk menghindari masalah timezone
+    const utcDate = new Date(Date.UTC(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate()
+    ));
+    const day = String(utcDate.getUTCDate()).padStart(2, '0');
+    const month = String(utcDate.getUTCMonth() + 1).padStart(2, '0');
+    const year = utcDate.getUTCFullYear();
     return `${year}-${month}-${day}`;
   };
 
   // Fungsi untuk memformat tanggal menjadi string dd/mm/yyyy untuk display
   const formatDate = (date) => {
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
+    if (!date) return '-';
+    // Pastikan kita menggunakan UTC untuk menghindari masalah timezone
+    const utcDate = new Date(Date.UTC(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate()
+    ));
+    return utcDate.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    });
   };
 
   // Handle input perubahan pada form
@@ -86,91 +100,46 @@ export default function BookingPage() {
       // Tampilkan loading atau feedback
       setLoading(true);
       
-      // Buat array untuk menyimpan semua respons booking
-      const bookingResponses = [];
-      const errorResponses = [];
+      // Kumpulkan semua ID sesi yang dipilih
+      const selectedSessionIds = selectedTimeSlots.map(slot => slot.id_jam || slot.id_sesi || slot.id);
       
-      // Loop melalui setiap time slot yang dipilih dan buat booking terpisah
-      for (const timeSlot of selectedTimeSlots) {
-        try {
-          // Siapkan data untuk API
-          const bookingData = {
-            id_lapangan: selectedField.id,
-            id_sesi: timeSlot.id_jam || timeSlot.id_sesi || timeSlot.id,
-            tanggal: formatDateForAPI(selectedDate),
-            // Data tambahan untuk membantu aplikasi
-            nama_pelanggan: bookingForm.name,
-            email: bookingForm.email,
-            no_hp: bookingForm.phone,
-            catatan: bookingForm.notes,
-          };
-          
-          console.log("Mengirim data booking:", bookingData);
-          
-          // Kirim request ke API
-          const response = await bookingService.create(bookingData);
-          bookingResponses.push(response);
-        } catch (slotError) {
-          console.error("Error saat booking sesi:", timeSlot, slotError);
-          errorResponses.push({
-            timeSlot,
-            error: slotError.response?.data?.message || "Terjadi kesalahan saat membuat booking"
-          });
-        }
-      }
+      // Siapkan data untuk API
+      const bookingData = {
+        id_lapangan: selectedField.id,
+        id_sesi: selectedSessionIds, // Kirim array id_sesi
+        tanggal: formatDateForAPI(selectedDate),
+        nama_pelanggan: bookingForm.name,
+        email: bookingForm.email,
+        no_hp: bookingForm.phone,
+        catatan: bookingForm.notes,
+      };
       
-      console.log("Semua respons booking:", bookingResponses);
+      console.log("Mengirim data booking:", bookingData);
       
-      if (errorResponses.length > 0) {
-        console.error("Beberapa sesi gagal dibooking:", errorResponses);
-        
-        if (bookingResponses.length > 0) {
-          // Berhasil booking sebagian sesi
-          alert(`${bookingResponses.length} sesi berhasil dibooking, namun ${errorResponses.length} sesi gagal: ${errorResponses.map(e => e.error).join(", ")}`);
-          
-          // Reset form dan selected slots
-          setBookingForm({
-            name: "",
-            phone: "",
-            email: "",
-            team: "",
-            participants: "",
-            notes: "",
-            paymentMethod: "transfer"
-          });
-          setSelectedTimeSlots([]);
-          
-          // Close modal
-          setShowBookingModal(false);
-          
-          // Redirect ke dashboard untuk melihat booking yang berhasil
-          router.push('/dashboard');
-        } else {
-          // Semua booking gagal
-          alert(`Booking gagal: ${errorResponses.map(e => e.error).join(", ")}`);
-        }
-      } else {
-        // Semua booking berhasil
-        alert(`${selectedTimeSlots.length} sesi booking berhasil dibuat! Silakan cek halaman dashboard untuk melihat booking Anda.`);
-        
-        // Close modal
-        setShowBookingModal(false);
-        
-        // Reset form dan selected slots
-        setBookingForm({
-          name: "",
-          phone: "",
-          email: "",
-          team: "",
-          participants: "",
-          notes: "",
-          paymentMethod: "transfer"
-        });
-        setSelectedTimeSlots([]);
-        
-        // Redirect ke halaman dashboard
-        router.push('/dashboard');
-      }
+      // Kirim request ke API
+      const response = await bookingService.create(bookingData);
+      console.log("Respons booking:", response);
+      
+      // Booking berhasil
+      alert("Booking berhasil dibuat! Silakan cek halaman dashboard untuk melihat booking Anda.");
+      
+      // Close modal
+      setShowBookingModal(false);
+      
+      // Reset form dan selected slots
+      setBookingForm({
+        name: "",
+        phone: "",
+        email: "",
+        team: "",
+        participants: "",
+        notes: "",
+        paymentMethod: "transfer"
+      });
+      setSelectedTimeSlots([]);
+      
+      // Redirect ke halaman dashboard
+      router.push('/dashboard');
       
     } catch (error) {
       console.error("Error creating booking:", error);
@@ -1057,6 +1026,26 @@ export default function BookingPage() {
                       // Cek apakah sesi ini telah dipilih
                       const isSelected = selectedTimeSlots.some(s => s.id === session.id);
                       
+                      // Tentukan pesan status untuk sesi yang tidak tersedia
+                      let statusMessage = '';
+                      if (!session.tersedia) {
+                          if (session.alasan === 'expired') {
+                              statusMessage = 'Waktu telah lewat';
+                          } else if (session.alasan === 'booked') {
+                              statusMessage = 'Sudah dipesan';
+                          }
+                      }
+
+                      // Format harga
+                      const formatPrice = (price) => {
+                          return new Intl.NumberFormat('id-ID', {
+                              style: 'currency',
+                              currency: 'IDR',
+                              minimumFractionDigits: 0,
+                              maximumFractionDigits: 0
+                          }).format(price);
+                      };
+                      
                       return (
                         <Button
                           key={session.id}
@@ -1064,56 +1053,76 @@ export default function BookingPage() {
                           onClick={() => handleSessionSelect(session)}
                           disabled={!session.tersedia}
                           sx={{
-                            minWidth: '120px',
+                            minWidth: '200px',
                             borderRadius: '8px',
                             py: 1.5,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '4px',
                             borderColor: !session.tersedia 
-                              ? 'grey.300' 
-                              : isSelected 
-                                ? 'primary.main' 
-                                : 'primary.main',
-                            color: !session.tersedia 
-                              ? 'grey.500' 
-                              : isSelected 
-                                ? 'white' 
-                                : 'primary.main',
-                            backgroundColor: !session.tersedia 
-                              ? 'grey.100' 
-                              : isSelected 
-                                ? 'primary.main' 
-                                : 'transparent',
-                            '&:hover': {
-                              backgroundColor: !session.tersedia 
-                                ? 'grey.200' 
-                                : isSelected 
-                                  ? 'primary.dark' 
-                                  : 'primary.light',
-                              color: !session.tersedia 
-                                ? 'grey.600' 
-                                : isSelected 
-                                  ? 'white' 
-                                  : 'white',
-                              borderColor: !session.tersedia 
                                 ? 'grey.300' 
                                 : isSelected 
-                                  ? 'primary.dark' 
-                                  : 'primary.light',
+                                    ? 'primary.main' 
+                                    : 'primary.main',
+                            color: !session.tersedia 
+                                ? 'grey.500' 
+                                : isSelected 
+                                    ? 'white' 
+                                    : 'primary.main',
+                            backgroundColor: !session.tersedia 
+                                ? 'grey.100' 
+                                : isSelected 
+                                    ? 'primary.main' 
+                                    : 'transparent',
+                            '&:hover': {
+                                backgroundColor: !session.tersedia 
+                                    ? 'grey.200' 
+                                    : isSelected 
+                                        ? 'primary.dark' 
+                                        : 'primary.light',
+                                color: !session.tersedia 
+                                    ? 'grey.600' 
+                                    : 'white',
+                                borderColor: !session.tersedia 
+                                    ? 'grey.300' 
+                                    : isSelected 
+                                        ? 'primary.dark' 
+                                        : 'primary.light',
                             },
                             position: 'relative',
                             '&::after': !session.tersedia ? {
-                              content: '"Dipesan"',
-                              position: 'absolute',
-                              bottom: '2px',
-                              right: '3px',
-                              fontSize: '8px',
-                              color: 'error.main',
-                              fontWeight: 'bold'
+                                content: `"${statusMessage}"`,
+                                position: 'absolute',
+                                bottom: '2px',
+                                right: '3px',
+                                fontSize: '8px',
+                                color: 'error.main',
+                                fontWeight: 'bold'
                             } : {}
                           }}
                         >
-                          {session.formatted_start} - {session.formatted_end}
+                          <Typography variant="subtitle1" component="span" sx={{ fontWeight: 'medium' }}>
+                              {session.formatted_start} - {session.formatted_end}
+                          </Typography>
+                          <Box sx={{ 
+                              display: 'flex', 
+                              flexDirection: 'column', 
+                              alignItems: 'center',
+                              fontSize: '0.75rem',
+                              color: isSelected ? 'inherit' : 'text.secondary'
+                          }}>
+                              <Typography variant="caption">
+                                  Harga: {formatPrice(session.harga_dasar)}
+                              </Typography>
+                              {session.biaya_tambahan > 0 && (
+                                  <Typography variant="caption" sx={{ color: isSelected ? 'inherit' : 'warning.main' }}>
+                                      +{formatPrice(session.biaya_tambahan)}
+                                  </Typography>
+                              )}
+                          </Box>
                         </Button>
-                      )
+                      );
                     })}
                   </Box>
                 </>

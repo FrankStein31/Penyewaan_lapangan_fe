@@ -5,6 +5,13 @@ import Script from 'next/script';
 export default function Layout({ children }) {
   return (
     <html lang="en">
+      <head>
+        <Script
+          src="https://app.sandbox.midtrans.com/snap/snap.js"
+          data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY}
+          strategy="beforeInteractive"
+        />
+      </head>
       <body>
         <AuthProvider>
           {children}
@@ -19,10 +26,9 @@ export default function Layout({ children }) {
               const protectedPaths = ['/dashboard', '/admin', '/booking'];
               
               // Jika di protected path tapi tidak ada token, redirect ke login
-              const isProtected = protectedPaths.some(p => path.startsWith(p));
               const hasAuth = localStorage.getItem('user') || document.cookie.includes('laravel_session');
               
-              if (isProtected && !hasAuth) {
+              if (protectedPaths.some(p => path.startsWith(p)) && !hasAuth) {
                 console.log('No auth detected on protected route');
                 window.location.href = '/login';
               }

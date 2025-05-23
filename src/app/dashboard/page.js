@@ -43,27 +43,32 @@ export default function DashboardPage() {
         const fetchData = async () => {
             setLoading(true);
             try {
+                console.log('Mencoba fetch data di dashboard...');
                 // Fetch bookings data
                 const bookingsResponse = await bookingService.getUserBookings();
+                console.log('Response dari getUserBookings:', bookingsResponse);
+                
                 if (bookingsResponse && bookingsResponse.data && bookingsResponse.data.data) {
                     const bookingsData = bookingsResponse.data.data;
+                    console.log('Data booking berhasil didapatkan:', bookingsData);
                     setBookings(bookingsData);
                     
                     // Hitung total pembayaran
-                    const total = bookingsData.reduce((sum, booking) => sum + (parseFloat(booking.totalPrice) || 0), 0);
+                    const total = bookingsData.reduce((sum, booking) => sum + (parseFloat(booking.total_harga) || 0), 0);
                     setTotalPayment(total);
                     
                     // Hitung total jam
                     const hours = bookingsData.reduce((sum, booking) => {
-                        // Asumsi setiap sesi adalah 1 jam
-                        return sum + 1;
+                        // Gunakan durasi dari booking atau hitung dari jumlah sesi
+                        const durasi = booking.durasi || (booking.id_sesi ? booking.id_sesi.length : 0);
+                        return sum + durasi;
                     }, 0);
                     setTotalHours(hours);
                     
                     // Tentukan lapangan favorit berdasarkan frekuensi booking
                     const fieldCounts = {};
                     bookingsData.forEach(booking => {
-                        const fieldName = booking.fieldName || '';
+                        const fieldName = booking.lapangan?.nama || 'Tidak diketahui';
                         fieldCounts[fieldName] = (fieldCounts[fieldName] || 0) + 1;
                     });
                     
@@ -105,7 +110,30 @@ export default function DashboardPage() {
                     }
                 ]);
             } catch (error) {
-                console.error('Error fetching data:', error);
+                console.error('Error lengkap:', error);
+                // Tambahkan penanganan error yang lebih baik
+                if (error.response) {
+                    // Server memberikan respons dengan status error
+                    const statusCode = error.response.status;
+                    console.error('Response status:', statusCode);
+                    console.error('Response headers:', error.response.headers);
+                    console.error('Response data:', error.response.data);
+                    
+                    if (statusCode === 401) {
+                        console.log('Anda belum login atau sesi telah berakhir');
+                    } else if (statusCode === 404) {
+                        console.log('Endpoint tidak ditemukan. Coba periksa route API.');
+                    } else if (statusCode === 500) {
+                        console.log('Terjadi kesalahan pada server');
+                    }
+                } else if (error.request) {
+                    // Request dibuat tetapi tidak ada respons
+                    console.error('Request yang dikirim:', error.request);
+                    console.log('Tidak dapat terhubung ke server. Periksa koneksi internet Anda.');
+                } else {
+                    // Error dalam setup request
+                    console.log('Gagal memuat data: ' + error.message);
+                }
             } finally {
                 setLoading(false);
             }
