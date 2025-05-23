@@ -37,7 +37,7 @@ export default function PaymentsPage() {
     fetchPayments()
   }, [])
 
-  const fetchPayments = async () => {
+    const fetchPayments = async () => {
     setLoading(true)
     try {
       const response = await paymentService.getUserPayments()
@@ -48,14 +48,14 @@ export default function PaymentsPage() {
       } else {
         setPayments([])
       }
-      setError(null)
-    } catch (err) {
+        setError(null)
+      } catch (err) {
       console.error('Error fetching payments:', err)
-      setError('Gagal memuat data pembayaran. Silakan coba lagi.')
-    } finally {
-      setLoading(false)
+        setError('Gagal memuat data pembayaran. Silakan coba lagi.')
+      } finally {
+        setLoading(false)
+      }
     }
-  }
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue)
@@ -125,7 +125,7 @@ export default function PaymentsPage() {
 
       alert('Bukti pembayaran berhasil diunggah')
       handleCloseUploadDialog()
-      fetchPayments()
+    fetchPayments()
     } catch (err) {
       console.error('Error uploading payment proof:', err)
       alert('Gagal mengunggah bukti pembayaran. Silakan coba lagi.')

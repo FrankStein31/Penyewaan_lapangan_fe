@@ -23,12 +23,27 @@ export default function BookingAdmin() {
     const fetchBookings = async () => {
         try {
             setLoading(true);
-            setError(null); // Reset error state on new fetch
             const response = await bookingService.getAll();
-            setBookings(response?.data?.data || []);
+            
+            // Pastikan data ada dan dalam format yang benar
+            let bookingsData = [];
+            if (response && response.data) {
+                if (Array.isArray(response.data)) {
+                    bookingsData = response.data;
+                } else if (response.data.data && Array.isArray(response.data.data)) {
+                    bookingsData = response.data.data;
+                }
+            }
+            
+            // Urutkan booking berdasarkan tanggal terbaru
+            bookingsData.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            
+            setBookings(bookingsData);
+            setError(null);
         } catch (error) {
-            console.error("Error fetching bookings:", error);
-            setError("Gagal memuat data pemesanan. Silakan coba lagi."); // Set error message
+            console.error('Error fetching bookings:', error);
+            setError('Gagal memuat data pemesanan');
+            setBookings([]);
         } finally {
             setLoading(false);
         }
@@ -53,13 +68,19 @@ export default function BookingAdmin() {
         setShowModal(true);
     };
 
-    const confirmDelete = async () => {
+    const handleVerify = async (booking, isApproved) => {
         try {
-            await bookingService.delete(currentBooking.id);
-            setShowModal(false);
+            const newStatus = isApproved ? 'diverifikasi' : 'ditolak';
+            await bookingService.update(booking.id_pemesanan, {
+                status: newStatus
+            });
+            
+            showSnackbar(`Pemesanan berhasil ${isApproved ? 'diverifikasi' : 'ditolak'}`, 'success');
             fetchBookings();
+            setShowModal(false);
         } catch (error) {
-            console.error("Error deleting booking:", error);
+            console.error('Error updating booking:', error);
+            showSnackbar('Gagal memperbarui status pemesanan', 'error');
         }
     };
 
@@ -104,25 +125,80 @@ export default function BookingAdmin() {
     };
 
     const renderViewModal = () => (
-        <div className="max-w-md p-6 mx-auto bg-white rounded-lg">
-            <h3 className="mb-4 text-lg font-bold">Detail Pemesanan</h3>
-            <div className="mb-4 space-y-2">
-                <p><span className="font-semibold">ID:</span> {currentBooking.id}</p>
-                <p><span className="font-semibold">Nama:</span> {currentBooking.nama}</p>
-                <p><span className="font-semibold">Tanggal:</span> {new Date(currentBooking.tanggal).toLocaleDateString('id-ID')}</p>
-                <p><span className="font-semibold">Waktu:</span> {currentBooking.waktu}</p>
-                <p><span className="font-semibold">Status:</span>
-                    <span className={`ml-1 px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(currentBooking.status)}`}>
+        <div className="max-w-2xl p-6 mx-auto bg-white rounded-lg">
+            <h3 className="mb-4 text-xl font-bold">Detail Pemesanan</h3>
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <p className="text-sm text-gray-600">ID Pemesanan</p>
+                    <p className="font-medium">#{currentBooking.id_pemesanan}</p>
+                </div>
+                <div>
+                    <p className="text-sm text-gray-600">Status</p>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(currentBooking.status)}`}>
                         {currentBooking.status}
                     </span>
-                </p>
-                {currentBooking.catatanAdmin && (
-                    <p><span className="font-semibold">Catatan Admin:</span> {currentBooking.catatanAdmin}</p>
+                </div>
+                <div>
+                    <p className="text-sm text-gray-600">Nama Pelanggan</p>
+                    <p className="font-medium">{currentBooking.nama_pelanggan}</p>
+                </div>
+                <div>
+                    <p className="text-sm text-gray-600">Email</p>
+                    <p className="font-medium">{currentBooking.email}</p>
+                </div>
+                <div>
+                    <p className="text-sm text-gray-600">No. HP</p>
+                    <p className="font-medium">{currentBooking.no_hp}</p>
+                </div>
+                <div>
+                    <p className="text-sm text-gray-600">Lapangan</p>
+                    <p className="font-medium">{currentBooking.lapangan?.nama || '-'}</p>
+                </div>
+                <div>
+                    <p className="text-sm text-gray-600">Tanggal</p>
+                    <p className="font-medium">{new Date(currentBooking.tanggal).toLocaleDateString('id-ID')}</p>
+                </div>
+                <div>
+                    <p className="text-sm text-gray-600">Waktu</p>
+                    <p className="font-medium">{currentBooking.jam_mulai} - {currentBooking.jam_selesai}</p>
+                </div>
+                <div className="col-span-2">
+                    <p className="text-sm text-gray-600">Total Harga</p>
+                    <p className="text-lg font-bold text-indigo-600">
+                        {new Intl.NumberFormat('id-ID', {
+                            style: 'currency',
+                            currency: 'IDR'
+                        }).format(currentBooking.total_harga)}
+                    </p>
+                </div>
+                {currentBooking.catatan && (
+                    <div className="col-span-2">
+                        <p className="text-sm text-gray-600">Catatan</p>
+                        <p className="font-medium">{currentBooking.catatan}</p>
+                    </div>
                 )}
             </div>
-            <div className="flex justify-end">
+
+            {currentBooking.status === 'menunggu verifikasi' && (
+                <div className="flex justify-center gap-4 mt-6">
+                    <button
+                        onClick={() => handleVerify(currentBooking, false)}
+                        className="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700"
+                    >
+                        Tolak
+                    </button>
+                    <button
+                        onClick={() => handleVerify(currentBooking, true)}
+                        className="px-4 py-2 text-white bg-green-600 rounded-md hover:bg-green-700"
+                    >
+                        Verifikasi
+                    </button>
+                </div>
+            )}
+
+            <div className="flex justify-end mt-6">
                 <button
-                    className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
                     onClick={closeModal}
                 >
                     Tutup

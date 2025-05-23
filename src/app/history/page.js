@@ -21,7 +21,13 @@ import {
     Paper, 
     Chip,
     CircularProgress,
-    Alert
+    Alert,
+    Button,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Grid
 } from '@mui/material';
 
 export default function HistoryPage() {
@@ -29,6 +35,8 @@ export default function HistoryPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [tabValue, setTabValue] = useState(0);
+    const [selectedBooking, setSelectedBooking] = useState(null);
+    const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
     useEffect(() => {
         const fetchBookings = async () => {
@@ -99,8 +107,17 @@ export default function HistoryPage() {
 
     const formatDate = (dateString) => {
         if (!dateString) return '-';
-        const options = { day: 'numeric', month: 'long', year: 'numeric' };
-        return new Date(dateString).toLocaleDateString('id-ID', options);
+        // Gunakan Date constructor untuk parsing tanggal
+        const date = new Date(dateString);
+        // Pastikan tanggal valid
+        if (isNaN(date.getTime())) return '-';
+        
+        // Format tanggal ke lokal Indonesia
+        return date.toLocaleDateString('id-ID', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
     };
 
     const getStatusChip = (status) => {
@@ -153,6 +170,42 @@ export default function HistoryPage() {
         return 'Waktu tidak tersedia';
     };
 
+    const handleOpenDetail = (booking) => {
+        setSelectedBooking(booking);
+        setDetailDialogOpen(true);
+    };
+
+    const handleCloseDetail = () => {
+        setSelectedBooking(null);
+        setDetailDialogOpen(false);
+    };
+
+    const handlePayNow = async (booking) => {
+        try {
+            const { token } = await bookingService.getPaymentToken(booking.id_pemesanan);
+            
+            window.snap.pay(token, {
+                onSuccess: async (result) => {
+                    await bookingService.checkPaymentStatus(booking.id_pemesanan);
+                    showSnackbar('Pembayaran berhasil', 'success');
+                    fetchBookings();
+                },
+                onPending: (result) => {
+                    showSnackbar('Menunggu pembayaran', 'info');
+                },
+                onError: (result) => {
+                    showSnackbar('Pembayaran gagal', 'error');
+                },
+                onClose: () => {
+                    showSnackbar('Pembayaran dibatalkan', 'warning');
+                }
+            });
+        } catch (error) {
+            console.error('Error getting payment token:', error);
+            showSnackbar('Gagal memulai pembayaran', 'error');
+        }
+    };
+
     const renderBookingTable = (bookingList) => {
         return (
             <TableContainer component={Paper} sx={{ mt: 3 }} elevation={2}>
@@ -164,12 +217,13 @@ export default function HistoryPage() {
                             <TableCell>Waktu</TableCell>
                             <TableCell>Total</TableCell>
                             <TableCell>Status</TableCell>
+                            <TableCell>Aksi</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {bookingList.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={5} align="center">
+                                <TableCell colSpan={6} align="center">
                                     Tidak ada data booking
                                 </TableCell>
                             </TableRow>
@@ -187,6 +241,15 @@ export default function HistoryPage() {
                                         }).format(booking.total_harga || 0)}
                                     </TableCell>
                                     <TableCell>{getStatusChip(booking.status)}</TableCell>
+                                    <TableCell>
+                                        <Button
+                                            variant="outlined"
+                                            size="small"
+                                            onClick={() => handleOpenDetail(booking)}
+                                        >
+                                            Detail
+                                        </Button>
+                                    </TableCell>
                                 </TableRow>
                             ))
                         )}
@@ -196,51 +259,134 @@ export default function HistoryPage() {
         );
     };
 
+    // Dialog Detail Transaksi
+    const DetailDialog = ({ booking, open, onClose }) => {
+        if (!booking) return null;
+
+        return (
+            <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+                <DialogTitle>Detail Pemesanan</DialogTitle>
+                <DialogContent>
+                    <Box sx={{ p: 2 }}>
+                        <Typography variant="h6" gutterBottom>
+                            Informasi Booking
+                        </Typography>
+                        <Grid container spacing={2}>
+                            <Grid item xs={12}>
+                                <Typography variant="body2" color="text.secondary">
+                                    ID Pemesanan
+                                </Typography>
+                                <Typography variant="body1" gutterBottom>
+                                    #{booking.id_pemesanan}
+                                </Typography>
+                            </Grid>
+                            <Grid item xs={12}>
+                                <Typography variant="body2" color="text.secondary">
+                                    Status
+                                </Typography>
+                                <Box sx={{ mt: 1 }}>
+                                    {getStatusChip(booking.status)}
+                                </Box>
+                            </Grid>
+                            <Grid item xs={12}>
+                                <Typography variant="body2" color="text.secondary">
+                                    Lapangan
+                                </Typography>
+                                <Typography variant="body1" gutterBottom>
+                                    {booking.lapangan?.nama || 'Lapangan'}
+                                </Typography>
+                            </Grid>
+                            <Grid item xs={6}>
+                                <Typography variant="body2" color="text.secondary">
+                                    Tanggal
+                                </Typography>
+                                <Typography variant="body1" gutterBottom>
+                                    {formatDate(booking.tanggal)}
+                                </Typography>
+                            </Grid>
+                            <Grid item xs={6}>
+                                <Typography variant="body2" color="text.secondary">
+                                    Waktu
+                                </Typography>
+                                <Typography variant="body1" gutterBottom>
+                                    {formatSessionTime(booking)}
+                                </Typography>
+                            </Grid>
+                            <Grid item xs={12}>
+                                <Typography variant="body2" color="text.secondary">
+                                    Total Harga
+                                </Typography>
+                                <Typography variant="h6" color="primary" gutterBottom>
+                                    {new Intl.NumberFormat('id-ID', {
+                                        style: 'currency',
+                                        currency: 'IDR',
+                                        minimumFractionDigits: 0
+                                    }).format(booking.total_harga || 0)}
+                                </Typography>
+                            </Grid>
+                        </Grid>
+
+                        {booking.status === 'diverifikasi' && !booking.pembayaran && (
+                            <Box sx={{ mt: 3 }}>
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    fullWidth
+                                    onClick={() => handlePayNow(booking)}
+                                >
+                                    Bayar Sekarang
+                                </Button>
+                            </Box>
+                        )}
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={onClose}>Tutup</Button>
+                </DialogActions>
+            </Dialog>
+        );
+    };
+
     return (
         <UserLayout title="Riwayat Booking">
-            <Card>
-                <CardContent sx={{ p: 0 }}>
-                    <Tabs 
-                        value={tabValue} 
+            <Box sx={{ width: '100%', p: 3 }}>
+                <Paper sx={{ width: '100%', mb: 2 }}>
+                    <Tabs
+                        value={tabValue}
                         onChange={handleTabChange}
-                        variant="fullWidth" 
-                        sx={{ borderBottom: 1, borderColor: 'divider' }}
+                        indicatorColor="primary"
+                        textColor="primary"
+                        variant="fullWidth"
                     >
                         <Tab label="Sedang Berlangsung" />
                         <Tab label="Riwayat" />
                     </Tabs>
 
-                    <Box sx={{ p: 2 }}>
-                        {loading ? (
-                            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                                <CircularProgress />
-                            </Box>
-                        ) : error ? (
+                    {loading ? (
+                        <Box sx={{ p: 3 }}>
+                            <CircularProgress />
+                        </Box>
+                    ) : error ? (
+                        <Box sx={{ p: 3 }}>
                             <Alert severity="error">{error}</Alert>
-                        ) : (
-                            <div>
-                                {tabValue === 0 && (
-                                    <div>
-                                        <Typography variant="h6" gutterBottom>
-                                            Booking Sedang Berlangsung
-                                        </Typography>
-                                        {renderBookingTable(activeBookings)}
-                                    </div>
-                                )}
+                        </Box>
+                    ) : (
+                        <Box sx={{ p: 3 }}>
+                            {tabValue === 0 ? (
+                                renderBookingTable(activeBookings)
+                            ) : (
+                                renderBookingTable(historyBookings)
+                            )}
+                        </Box>
+                    )}
+                </Paper>
 
-                                {tabValue === 1 && (
-                                    <div>
-                                        <Typography variant="h6" gutterBottom>
-                                            Riwayat Booking
-                                        </Typography>
-                                        {renderBookingTable(historyBookings)}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </Box>
-                </CardContent>
-            </Card>
+                <DetailDialog
+                    booking={selectedBooking}
+                    open={detailDialogOpen}
+                    onClose={handleCloseDetail}
+                />
+            </Box>
         </UserLayout>
     );
 }
