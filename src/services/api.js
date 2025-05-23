@@ -435,7 +435,7 @@ export async function getUserNotifications() {
 }
 
 
-//poto profile user
+// poto profile user
 export async function getUserProfile() {
     return {
         name: 'Bayu Gilang P.',
@@ -455,4 +455,5 @@ export async function updateUserPhoto(formData) {
     console.log('Upload photo with:', formData.get('photo'))
     return { success: true }
 }
+
 
