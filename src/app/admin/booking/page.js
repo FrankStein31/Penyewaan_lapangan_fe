@@ -56,8 +56,38 @@ export default function BookingAdmin() {
         setShowModal(true);
     };
 
+    // Ganti status mapping agar sesuai backend
+    const STATUS_OPTIONS = [
+        { value: "menunggu verifikasi", label: "Menunggu Verifikasi" },
+        { value: "diverifikasi", label: "Diverifikasi" },
+        { value: "ditolak", label: "Ditolak" },
+        { value: "dibatalkan", label: "Dibatalkan" },
+        { value: "selesai", label: "Selesai" },
+    ];
+
+    // Perbaiki mapping warna status
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'diverifikasi':
+                return 'bg-green-100 text-green-800';
+            case 'menunggu verifikasi':
+                return 'bg-yellow-100 text-yellow-800';
+            case 'ditolak':
+            case 'dibatalkan':
+                return 'bg-red-100 text-red-800';
+            case 'selesai':
+                return 'bg-blue-100 text-blue-800';
+            default:
+                return 'bg-gray-100 text-gray-800';
+        }
+    };
+
     const handleEdit = (booking) => {
         setCurrentBooking(booking);
+        setFormData({
+            status: booking.status,
+            catatan: booking.catatan || "",
+        });
         setModalType("edit");
         setShowModal(true);
     };
@@ -109,21 +139,6 @@ export default function BookingAdmin() {
         setFormData({});
     };
 
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'confirmed':
-                return 'bg-green-100 text-green-800';
-            case 'pending':
-                return 'bg-yellow-100 text-yellow-800';
-            case 'cancelled':
-                return 'bg-red-100 text-red-800';
-            case 'completed':
-                return 'bg-blue-100 text-blue-800';
-            default:
-                return 'bg-gray-100 text-gray-800';
-        }
-    };
-
     const renderViewModal = () => (
         <div className="max-w-2xl p-6 mx-auto bg-white rounded-lg">
             <h3 className="mb-4 text-xl font-bold">Detail Pemesanan</h3>
@@ -160,7 +175,11 @@ export default function BookingAdmin() {
                 </div>
                 <div>
                     <p className="text-sm text-gray-600">Waktu</p>
-                    <p className="font-medium">{currentBooking.jam_mulai} - {currentBooking.jam_selesai}</p>
+                    <p className="font-medium">
+                        {(currentBooking.sesi && currentBooking.sesi.length > 0)
+                            ? `${currentBooking.sesi[0].jam_mulai} - ${currentBooking.sesi[currentBooking.sesi.length - 1].jam_selesai}`
+                            : "-"}
+                    </p>
                 </div>
                 <div className="col-span-2">
                     <p className="text-sm text-gray-600">Total Harga</p>
@@ -207,6 +226,7 @@ export default function BookingAdmin() {
         </div>
     );
 
+    // Modal Edit: gunakan field yang sesuai backend
     const renderEditModal = () => (
         <div className="max-w-md p-6 mx-auto bg-white rounded-lg">
             <h3 className="mb-4 text-lg font-bold">Edit Pemesanan</h3>
@@ -220,17 +240,16 @@ export default function BookingAdmin() {
                         className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                         required
                     >
-                        <option value="pending">Pending</option>
-                        <option value="confirmed">Confirmed</option>
-                        <option value="cancelled">Cancelled</option>
-                        <option value="completed">Completed</option>
+                        {STATUS_OPTIONS.map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
                     </select>
                 </div>
                 <div>
                     <label className="block mb-1 text-sm font-medium">Catatan Admin</label>
                     <textarea
-                        name="catatanAdmin"
-                        value={formData.catatanAdmin || ""}
+                        name="catatan"
+                        value={formData.catatan || ""}
                         onChange={handleChange}
                         className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                         rows="3"
@@ -283,6 +302,19 @@ export default function BookingAdmin() {
             case "edit": return renderEditModal();
             case "delete": return renderDeleteModal();
             default: return null;
+        }
+    };
+
+    // Fungsi hapus booking
+    const confirmDelete = async () => {
+        if (!currentBooking) return;
+        try {
+            await bookingService.delete(currentBooking.id_pemesanan);
+            fetchBookings();
+            setShowModal(false);
+        } catch (error) {
+            console.error("Error deleting booking:", error);
+            setError("Gagal menghapus pemesanan");
         }
     };
 
@@ -352,52 +384,59 @@ export default function BookingAdmin() {
                                         </thead>
                                         <tbody className="bg-white divide-y divide-gray-200">
                                             {bookings.length > 0 ? (
-                                                bookings.map((booking) => (
-                                                    <tr key={booking.id} className="hover:bg-gray-50">
-                                                        <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
-                                                            {booking.id}
-                                                        </td>
-                                                        <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                                            {booking.nama}
-                                                        </td>
-                                                        <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                                            {new Date(booking.tanggal).toLocaleDateString('id-ID')}
-                                                        </td>
-                                                        <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                                            {booking.waktu}
-                                                        </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap">
-                                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(booking.status)}`}>
-                                                                {booking.status}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-6 py-4 text-sm font-medium whitespace-nowrap">
-                                                            <div className="flex space-x-2">
-                                                                <button
-                                                                    onClick={() => handleView(booking)}
-                                                                    className="text-blue-600 hover:text-blue-900"
-                                                                    title="Lihat"
-                                                                >
-                                                                    <FaEye className="w-4 h-4" />
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleEdit(booking)}
-                                                                    className="text-yellow-600 hover:text-yellow-900"
-                                                                    title="Edit"
-                                                                >
-                                                                    <FaEdit className="w-4 h-4" />
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleDelete(booking)}
-                                                                    className="text-red-600 hover:text-red-900"
-                                                                    title="Hapus"
-                                                                >
-                                                                    <FaTrash className="w-4 h-4" />
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ))
+                                                bookings.map((booking) => {
+                                                    // Ambil sesi terurut
+                                                    const sesi = booking.sesi || [];
+                                                    sesi.sort((a, b) => (a.jam_mulai > b.jam_mulai ? 1 : -1));
+                                                    const jamMulai = sesi.length > 0 ? sesi[0].jam_mulai : "-";
+                                                    const jamSelesai = sesi.length > 0 ? sesi[sesi.length - 1].jam_selesai : "-";
+                                                    return (
+                                                        <tr key={booking.id_pemesanan} className="hover:bg-gray-50">
+                                                            <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
+                                                                {booking.id_pemesanan}
+                                                            </td>
+                                                            <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                                                                {booking.nama_pelanggan}
+                                                            </td>
+                                                            <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                                                                {new Date(booking.tanggal).toLocaleDateString('id-ID')}
+                                                            </td>
+                                                            <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                                                                {jamMulai} - {jamSelesai}
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(booking.status)}`}>
+                                                                    {booking.status}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-6 py-4 text-sm font-medium whitespace-nowrap">
+                                                                <div className="flex space-x-2">
+                                                                    <button
+                                                                        onClick={() => handleView(booking)}
+                                                                        className="text-blue-600 hover:text-blue-900"
+                                                                        title="Lihat"
+                                                                    >
+                                                                        <FaEye className="w-4 h-4" />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleEdit(booking)}
+                                                                        className="text-yellow-600 hover:text-yellow-900"
+                                                                        title="Edit"
+                                                                    >
+                                                                        <FaEdit className="w-4 h-4" />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDelete(booking)}
+                                                                        className="text-red-600 hover:text-red-900"
+                                                                        title="Hapus"
+                                                                    >
+                                                                        <FaTrash className="w-4 h-4" />
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })
                                             ) : (
                                                 <tr>
                                                     <td colSpan="6" className="px-6 py-12 text-center text-sm text-gray-500">
