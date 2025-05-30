@@ -1,0 +1,1 @@
+<link rel="preload" href="/_next/static/css/app/layout.css" as="style">

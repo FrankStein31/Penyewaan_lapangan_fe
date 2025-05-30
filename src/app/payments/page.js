@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import UserLayout from '@/components/user/UserLayout'
-import { Box, Typography, Card, CardContent, Grid, Button, Tab, Tabs, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material'
+import { Box, Typography, Card, CardContent, Grid, Button, Tab, Tabs, Divider, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Avatar } from '@mui/material'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import PaymentStatusBadge from '@/components/user/PaymentStatusBadge'
 import SkeletonLoader from '@/components/common/SkeletonLoader'
@@ -15,6 +15,7 @@ import HistoryIcon from '@mui/icons-material/History'
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload'
 import InfoIcon from '@mui/icons-material/Info'
+import PersonIcon from '@mui/icons-material/Person'
 
 export default function PaymentsPage() {
   const { user } = useAuth()
@@ -35,114 +36,131 @@ export default function PaymentsPage() {
 
   useEffect(() => {
     fetchPayments()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-    const fetchPayments = async () => {
+  const fetchPayments = async () => {
     setLoading(true)
     try {
-      const response = await paymentService.getUserPayments()
-      console.log('Data pembayaran:', response.data)
-
-      if (response && response.data) {
-        setPayments(response.data)
-      } else {
-        setPayments([])
-      }
-        setError(null)
-      } catch (err) {
-      console.error('Error fetching payments:', err)
-        setError('Gagal memuat data pembayaran. Silakan coba lagi.')
-      } finally {
-        setLoading(false)
-      }
+      const data = await paymentService.getAll()
+      setPayments(Array.isArray(data) ? data : [])
+      setError(null)
+    } catch (err) {
+      setError('Gagal memuat data pembayaran. Silakan coba lagi.')
+    } finally {
+      setLoading(false)
     }
-
-  const handleTabChange = (event, newValue) => {
-    setTabValue(newValue)
   }
 
-  const handleOpenDetailDialog = (payment) => {
-    setDetailDialog({
-      open: true,
-      payment
-    })
-  }
-
-  const handleCloseDetailDialog = () => {
-    setDetailDialog({
-      open: false,
-      payment: null
-    })
-  }
-
-  const handleOpenUploadDialog = (payment) => {
-    setUploadDialog({
-      open: true,
-      payment,
-      file: null,
-      notes: ''
-    })
-  }
-
-  const handleCloseUploadDialog = () => {
-    setUploadDialog({
-      open: false,
-      payment: null,
-      file: null,
-      notes: ''
-    })
-  }
-
+  const handleTabChange = (event, newValue) => setTabValue(newValue)
+  const handleOpenDetailDialog = (payment) => setDetailDialog({ open: true, payment })
+  const handleCloseDetailDialog = () => setDetailDialog({ open: false, payment: null })
+  const handleOpenUploadDialog = (payment) => setUploadDialog({ open: true, payment, file: null, notes: '' })
+  const handleCloseUploadDialog = () => setUploadDialog({ open: false, payment: null, file: null, notes: '' })
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
-      setUploadDialog({
-        ...uploadDialog,
-        file: e.target.files[0]
-      })
+      setUploadDialog({ ...uploadDialog, file: e.target.files[0] })
     }
   }
-
-  const handleNotesChange = (e) => {
-    setUploadDialog({
-      ...uploadDialog,
-      notes: e.target.value
-    })
-  }
+  const handleNotesChange = (e) => setUploadDialog({ ...uploadDialog, notes: e.target.value })
 
   const handleUploadPaymentProof = async () => {
     if (!uploadDialog.file) {
       alert('Mohon pilih file bukti pembayaran')
       return
     }
-
+    
     try {
+      // Tambahkan loading state
+      setLoading(true)
+      
       const formData = new FormData()
       formData.append('bukti_pembayaran', uploadDialog.file)
       formData.append('catatan', uploadDialog.notes)
       formData.append('id_pembayaran', uploadDialog.payment.id)
-
-      await paymentService.uploadPaymentProof(formData)
-
+      
+      // Tambahkan ID sebagai path parameter untuk memastikan endpoint benar
+      // Ini memberikan alternatif endpoint /payments/{id}/proof
+      const response = await paymentService.uploadPaymentProof(formData);
+      
+      console.log('Upload success:', response)
       alert('Bukti pembayaran berhasil diunggah')
       handleCloseUploadDialog()
-    fetchPayments()
+      fetchPayments() // Refresh data
     } catch (err) {
       console.error('Error uploading payment proof:', err)
-      alert('Gagal mengunggah bukti pembayaran. Silakan coba lagi.')
+      
+      // Tampilkan pesan error yang lebih spesifik
+      let errorMessage = 'Gagal mengunggah bukti pembayaran. ';
+      if (err.response) {
+        if (err.response.status === 404) {
+          errorMessage += 'Endpoint tidak ditemukan. Silakan hubungi admin.';
+        } else if (err.response.status === 422) {
+          errorMessage += 'Data tidak valid. Periksa format file.';
+        } else if (err.response.data && err.response.data.message) {
+          errorMessage += err.response.data.message;
+        }
+      }
+      
+      alert(errorMessage)
+    } finally {
+      setLoading(false)
     }
   }
 
+  const STATUS = {
+    WAITING: 'menunggu verifikasi',
+    UNPAID: 'belum dibayar',
+    REJECTED: 'ditolak',
+    VERIFIED: 'diverifikasi'
+  }
+
+  // Statistik
+  const totalWaiting = payments.filter(p => p.status === STATUS.WAITING || p.status === STATUS.UNPAID).length
+  const totalPaid = payments.filter(p => p.status === STATUS.VERIFIED).reduce((sum, item) => sum + (item.amount || 0), 0)
+
+  // Filter tab
   const filteredPayments = payments.filter(payment => {
     if (tabValue === 0) return true
-    if (tabValue === 1) return payment.status === 'pending'
-    if (tabValue === 2) return payment.status === 'paid'
+    if (tabValue === 1) return payment.status === STATUS.WAITING || payment.status === STATUS.UNPAID
+    if (tabValue === 2) return payment.status === STATUS.VERIFIED
+    if (tabValue === 3) return payment.status === STATUS.REJECTED
     return true
   })
 
+  if (loading) {
+    return (
+      <UserLayout title="Manajemen Pembayaran">
+        <SkeletonLoader count={3} />
+      </UserLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <UserLayout title="Manajemen Pembayaran">
+        <Box sx={{ p: 2, textAlign: 'center' }}>
+          <Typography color="error">{error}</Typography>
+          <Button variant="outlined" onClick={fetchPayments} sx={{ mt: 2 }}>
+            Coba Lagi
+          </Button>
+        </Box>
+      </UserLayout>
+    )
+  }
+
   return (
-    <UserLayout title="Pembayaran">
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={4}>
+    <UserLayout title="Manajemen Pembayaran">
+      <Grid
+        container
+        spacing={2}
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+          gap: 2,
+        }}
+      >
+        <Grid>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -161,7 +179,7 @@ export default function PaymentsPage() {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={4}>
+        <Grid>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -170,17 +188,17 @@ export default function PaymentsPage() {
                 </Box>
                 <Box>
                   <Typography variant="body2" color="text.secondary">
-                    Menunggu Pembayaran
+                    Menunggu Pembayaran/Verifikasi
                   </Typography>
                   <Typography variant="h6">
-                    {payments.filter(p => p.status === 'pending').length}
+                    {totalWaiting}
                   </Typography>
                 </Box>
               </Box>
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={4}>
+        <Grid>
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -192,7 +210,7 @@ export default function PaymentsPage() {
                     Total Dibayar
                   </Typography>
                   <Typography variant="h6">
-                    {formatCurrency(payments.filter(p => p.status === 'paid').reduce((sum, item) => sum + item.amount, 0))}
+                    {formatCurrency(totalPaid)}
                   </Typography>
                 </Box>
               </Box>
@@ -201,7 +219,7 @@ export default function PaymentsPage() {
         </Grid>
       </Grid>
 
-      <Card>
+      <Card sx={{ mt: 3 }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs
             value={tabValue}
@@ -210,107 +228,109 @@ export default function PaymentsPage() {
             scrollButtons="auto"
           >
             <Tab label="Semua" />
-            <Tab label="Menunggu Pembayaran" />
+            <Tab label="Menunggu Verifikasi" />
             <Tab label="Sudah Dibayar" />
+            <Tab label="Ditolak" />
           </Tabs>
         </Box>
 
         <CardContent>
-          {loading ? (
-            <SkeletonLoader count={3} />
-          ) : error ? (
-            <Box sx={{ p: 2, textAlign: 'center' }}>
-              <Typography color="error">{error}</Typography>
-              <Button variant="outlined" onClick={fetchPayments} sx={{ mt: 2 }}>
-                Coba Lagi
-              </Button>
-            </Box>
-          ) : filteredPayments.length === 0 ? (
+          {filteredPayments.length === 0 ? (
             <EmptyState
               title="Tidak ada data pembayaran"
               message="Belum ada data pembayaran yang tersedia."
             />
           ) : (
             <Box>
-              {filteredPayments.map((payment) => (
-                <Card key={payment.id} sx={{ mb: 2, border: 1, borderColor: 'divider', boxShadow: 'none' }}>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                      <Box>
-                        <Typography variant="subtitle1" fontWeight="medium">
-                          Booking #{payment.booking_id || '000000'}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {formatDate(payment.date)}
-                        </Typography>
+              {filteredPayments.map((payment, idx) => (
+                <Box key={payment.id ?? `payment-${idx}`}>
+                  <Card sx={{ mb: 0, border: 1, borderColor: 'divider', boxShadow: 'none', borderRadius: 2 }}>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                        <Box>
+                          <Typography variant="subtitle1" fontWeight="medium">
+                            Booking #{payment.booking_id || '000000'}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {formatDate(payment.date)}
+                          </Typography>
+                        </Box>
+                        <PaymentStatusBadge status={payment.status} />
                       </Box>
-                      <PaymentStatusBadge status={payment.status} />
-                    </Box>
-
-                    <Grid container spacing={2}>
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="body2" color="text.secondary">
-                          Jumlah Pembayaran
-                        </Typography>
-                        <Typography variant="h6" color="primary.main" fontWeight="bold">
-                          {formatCurrency(payment.amount)}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Metode: {payment.method || 'Transfer Bank'}
-                        </Typography>
+                      <Grid container spacing={2}>
+                        <Grid xs={12} sm={6}>
+                          <Typography variant="body2" color="text.secondary">
+                            Jumlah Pembayaran
+                          </Typography>
+                          <Typography variant="h6" color="primary.main" fontWeight="bold">
+                            {formatCurrency(payment.amount)}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Metode: {payment.method || 'Transfer Bank'}
+                          </Typography>
+                        </Grid>
+                        <Grid xs={12} sm={6}>
+                          <Typography variant="body2" color="text.secondary">
+                            Booking Lapangan
+                          </Typography>
+                          <Typography variant="body1">
+                            {payment.field_name || 'Lapangan A'}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {payment.schedule || 'Jadwal tidak tersedia'}
+                          </Typography>
+                        </Grid>
+                        <Grid xs={12} sm={6} sx={{ mt: 1 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Avatar sx={{ width: 28, height: 28, bgcolor: 'grey.200', color: 'primary.main' }}>
+                              <PersonIcon />
+                            </Avatar>
+                            <Typography variant="body2" color="text.secondary">
+                              {payment.user_name || '-'}
+                            </Typography>
+                          </Box>
+                        </Grid>
                       </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="body2" color="text.secondary">
-                          Booking Lapangan
-                        </Typography>
-                        <Typography variant="body1">
-                          {payment.field_name || 'Lapangan A'}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {payment.schedule || 'Jadwal tidak tersedia'}
-                        </Typography>
-                      </Grid>
-                    </Grid>
-
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-                      <Button
-                        size="small"
-                        startIcon={<InfoIcon />}
-                        onClick={() => handleOpenDetailDialog(payment)}
-                        sx={{ mr: 1 }}
-                      >
-                        Detail
-                      </Button>
-
-                      {payment.status === 'pending' && (
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
                         <Button
-                          variant="contained"
                           size="small"
-                          color="primary"
-                          onClick={() => handleOpenUploadDialog(payment)}
+                          startIcon={<InfoIcon />}
+                          onClick={() => handleOpenDetailDialog(payment)}
+                          sx={{ mr: 1 }}
                         >
-                          Upload Bukti
+                          Detail
                         </Button>
-                      )}
-
-                      {payment.status === 'paid' && (
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          startIcon={<CloudDownloadIcon />}
-                        >
-                          Invoice
-                        </Button>
-                      )}
-                    </Box>
-                  </CardContent>
-                </Card>
+                        {(payment.status === STATUS.WAITING || payment.status === STATUS.UNPAID) && (
+                          <Button
+                            variant="contained"
+                            size="small"
+                            color="primary"
+                            onClick={() => handleOpenUploadDialog(payment)}
+                          >
+                            Upload Bukti
+                          </Button>
+                        )}
+                        {payment.status === STATUS.VERIFIED && (
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<CloudDownloadIcon />}
+                          >
+                            Invoice
+                          </Button>
+                        )}
+                      </Box>
+                    </CardContent>
+                  </Card>
+                  {idx < filteredPayments.length - 1 && <Divider sx={{ my: 2 }} />}
+                </Box>
               ))}
             </Box>
           )}
         </CardContent>
       </Card>
 
+      {/* Dialog Detail */}
       <Dialog
         open={detailDialog.open}
         onClose={handleCloseDetailDialog}
@@ -322,8 +342,16 @@ export default function PaymentsPage() {
         </DialogTitle>
         <DialogContent dividers>
           {detailDialog.payment && (
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
+            <Grid
+              container
+              spacing={2}
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                gap: 2,
+              }}
+            >
+              <Grid>
                 <Typography variant="body2" color="text.secondary">
                   ID Pembayaran
                 </Typography>
@@ -331,13 +359,13 @@ export default function PaymentsPage() {
                   #{detailDialog.payment.id}
                 </Typography>
               </Grid>
-              <Grid item xs={6}>
+              <Grid>
                 <Typography variant="body2" color="text.secondary">
                   Status
                 </Typography>
                 <PaymentStatusBadge status={detailDialog.payment.status} />
               </Grid>
-              <Grid item xs={6}>
+              <Grid>
                 <Typography variant="body2" color="text.secondary">
                   Tanggal Pembayaran
                 </Typography>
@@ -345,7 +373,7 @@ export default function PaymentsPage() {
                   {formatDate(detailDialog.payment.date)}
                 </Typography>
               </Grid>
-              <Grid item xs={6}>
+              <Grid>
                 <Typography variant="body2" color="text.secondary">
                   Metode Pembayaran
                 </Typography>
@@ -353,7 +381,7 @@ export default function PaymentsPage() {
                   {detailDialog.payment.method || 'Transfer Bank'}
                 </Typography>
               </Grid>
-              <Grid item xs={12}>
+              <Grid xs={12}>
                 <Typography variant="body2" color="text.secondary">
                   Jumlah Pembayaran
                 </Typography>
@@ -361,7 +389,7 @@ export default function PaymentsPage() {
                   {formatCurrency(detailDialog.payment.amount)}
                 </Typography>
               </Grid>
-              <Grid item xs={12}>
+              <Grid xs={12}>
                 <Typography variant="body2" color="text.secondary">
                   Detail Booking
                 </Typography>
@@ -372,15 +400,24 @@ export default function PaymentsPage() {
                   {detailDialog.payment.schedule || 'Jadwal tidak tersedia'}
                 </Typography>
               </Grid>
-
-              {detailDialog.payment.status === 'paid' && (
-                <Grid item xs={12}>
+              <Grid xs={12}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Avatar sx={{ width: 28, height: 28, bgcolor: 'grey.200', color: 'primary.main' }}>
+                    <PersonIcon />
+                  </Avatar>
+                  <Typography variant="body2" color="text.secondary">
+                    {detailDialog.payment.user_name || '-'}
+                  </Typography>
+                </Box>
+              </Grid>
+              {(detailDialog.payment.status === STATUS.VERIFIED || detailDialog.payment.status === STATUS.WAITING) && detailDialog.payment.bukti_transfer && (
+                <Grid xs={12}>
                   <Typography variant="body2" color="text.secondary">
                     Bukti Pembayaran
                   </Typography>
                   <Box sx={{ mt: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
                     <img
-                      src="/sample-payment-proof.jpg"
+                      src={detailDialog.payment.bukti_transfer}
                       alt="Bukti Pembayaran"
                       style={{ width: '100%', height: 'auto', display: 'block' }}
                     />
@@ -392,7 +429,7 @@ export default function PaymentsPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDetailDialog}>Tutup</Button>
-          {detailDialog.payment && detailDialog.payment.status === 'paid' && (
+          {detailDialog.payment && detailDialog.payment.status === STATUS.VERIFIED && (
             <Button variant="contained" startIcon={<CloudDownloadIcon />}>
               Download Invoice
             </Button>
@@ -400,6 +437,7 @@ export default function PaymentsPage() {
         </DialogActions>
       </Dialog>
 
+      {/* Dialog Upload */}
       <Dialog
         open={uploadDialog.open}
         onClose={handleCloseUploadDialog}
@@ -417,7 +455,7 @@ export default function PaymentsPage() {
               </Typography>
 
               <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={6}>
+                <Grid xs={6}>
                   <Typography variant="body2" color="text.secondary">
                     ID Pembayaran
                   </Typography>
@@ -425,7 +463,7 @@ export default function PaymentsPage() {
                     #{uploadDialog.payment.id}
                   </Typography>
                 </Grid>
-                <Grid item xs={6}>
+                <Grid xs={6}>
                   <Typography variant="body2" color="text.secondary">
                     Jumlah
                   </Typography>

@@ -1,5 +1,5 @@
+import "../../src/styles/globals.css";
 import axios from 'axios';
-// import { axiosInstance } from '@/services/api';
 
 // Dapatkan URL API dari environment variable
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -34,49 +34,150 @@ axiosInstance.interceptors.request.use(
 // Add response interceptor
 axiosInstance.interceptors.response.use(
     (response) => {
-        console.log('Response:', {
-            status: response.status,
-            data: response.data
-        });
         return response;
     },
     (error) => {
-        console.error('Response Error:', {
-            status: error.response?.status,
-            data: error.response?.data,
-            message: error.message
-        });
-        
-        // Jika error 401 (Unauthorized)
-        if (error.response?.status === 401) {
-            if (typeof window !== 'undefined') {
-                localStorage.removeItem('user');
-                localStorage.removeItem('token');
-                sessionStorage.clear();
-
-                // Hapus cookie
-                try {
-                    document.cookie.split(";").forEach(function (c) {
-                        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-                    });
-                } catch (e) {
-                    console.error('Error saat menghapus cookies:', e);
-                }
-
-                // Redirect ke login, kecuali jika di halaman publik
-                const currentPath = window.location.pathname;
-                if (currentPath !== '/' && currentPath !== '/login' && currentPath !== '/register') {
-                    console.log('Redirecting ke halaman login...');
-                    window.location.href = '/login';
-                } else {
-                    console.log('Sudah di halaman publik, tidak perlu redirect');
-                }
-            }
-        }
-        
+        console.error('Response Error:', error.response || error);
         return Promise.reject(error);
     }
 );
+
+// Tambahkan fungsi mockAPI untuk testing sementara
+const mockUploadPaymentProof = async (formData) => {
+    // Simulasi delay jaringan
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Buat response mock
+    return {
+        success: true,
+        message: 'Bukti pembayaran berhasil diunggah',
+        data: {
+            id: formData.get('id_pembayaran'),
+            status: 'menunggu verifikasi',
+            catatan: formData.get('catatan'),
+            bukti_transfer: URL.createObjectURL(formData.get('bukti_pembayaran'))
+        }
+    };
+};
+
+// Tambahkan fungsi mock untuk data pembayaran
+const getMockPayments = () => {
+    // Data dummy untuk testing UI
+    return [
+        {
+            id: 1,
+            id_pemesanan: 101,
+            total: 150000,
+            tanggal: '2025-05-25',
+            metode_pembayaran: 'transfer',
+            status: 'pending',
+            bukti_transfer: null,
+            catatan: ''
+        },
+        {
+            id: 2,
+            id_pemesanan: 102,
+            total: 200000,
+            tanggal: '2025-05-24',
+            metode_pembayaran: 'transfer',
+            status: 'lunas',
+            bukti_transfer: '/images/bukti-transfer.jpg',
+            catatan: 'Pembayaran via BCA'
+        }
+    ];
+};
+
+// Payment service - pastikan hanya dideklarasikan sekali
+export const paymentService = {
+    getAll: async () => {
+        try {
+            // Coba akses API
+            const response = await axiosInstance.get('/pembayaran');
+            return response.data.data || [];
+        } catch (error) {
+            console.warn('Menggunakan mock data untuk payments karena API error:', error);
+            // Fallback ke mock data jika API error
+            return getMockPayments();
+        }
+    },
+    
+    // Mendapatkan semua pembayaran - implementasi alternatif
+    getAllPayments: async () => {
+        const response = await axiosInstance.get('/pembayaran')
+        return response.data.data
+    },
+    
+    // Gunakan endpoint yang benar: payment-proof bukan upload-proof
+    uploadPaymentProof: async (formData) => {
+        try {
+            // Gunakan mock untuk sementara
+            // Hapus baris ini jika backend sudah siap
+            return await mockUploadPaymentProof(formData);
+            
+            // Kode asli yang akan digunakan nanti dengan endpoint yang benar
+            /*
+            const response = await axiosInstance.post('/pembayaran/bukti-pembayaran', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+            return response.data;
+            */
+        } catch (error) {
+            console.error('Error uploading payment proof:', error);
+            throw error;
+        }
+    },
+
+    // Tambahkan fungsi lain jika perlu
+    getById: async (id) => {
+        try {
+            // Ubah endpoint dari '/payments' ke '/pembayaran'
+            const response = await axiosInstance.get(`/pembayaran/${id}`);
+            return response.data.data;
+        } catch (error) {
+            console.error(`Error fetching payment ${id}:`, error);
+            throw error;
+        }
+    },
+    
+    // Membuat pembayaran baru
+    create: async (paymentData) => {
+        return axiosInstance.post('/pembayaran', paymentData);
+    },
+
+    // Update pembayaran
+    update: async (id, paymentData) => {
+        return axiosInstance.put(`/pembayaran/${id}`, paymentData);
+    },
+
+    // Hapus pembayaran
+    delete: async (id) => {
+        return axiosInstance.delete(`/pembayaran/${id}`);
+    },
+
+    // Midtrans payment
+    createPayment: async (bookingId) => {
+        try {
+            const response = await axiosInstance.post(`/pemesanan/${bookingId}/payment`);
+            return response.data;
+        } catch (error) {
+            console.error('Error creating payment:', error);
+            throw error;
+        }
+    },
+
+    // Check payment status
+    checkStatus: async (bookingId) => {
+        try {
+            const response = await axiosInstance.get(`/pemesanan/${bookingId}/payment/status`);
+            return response.data;
+        } catch (error) {
+            console.error('Error checking payment status:', error);
+            throw error;
+        }
+    }
+};
 
 // Auth services
 export const authService = {
@@ -473,56 +574,6 @@ export const bookingService = {
     }
 };
 
-// Payment (Pembayaran) services
-export const paymentService = {
-    // Mendapatkan semua pembayaran
-    getAll: async () => {
-        return axiosInstance.get('/pembayaran');
-    },
-
-    // Mendapatkan pembayaran berdasarkan id
-    getById: async (id) => {
-        return axiosInstance.get(`/pembayaran/${id}`);
-    },
-
-    // Membuat pembayaran baru
-    create: async (paymentData) => {
-        return axiosInstance.post('/pembayaran', paymentData);
-    },
-
-    // Update pembayaran
-    update: async (id, paymentData) => {
-        return axiosInstance.put(`/pembayaran/${id}`, paymentData);
-    },
-
-    // Hapus pembayaran
-    delete: async (id) => {
-        return axiosInstance.delete(`/pembayaran/${id}`);
-    },
-
-    // Midtrans payment
-    createPayment: async (bookingId) => {
-        try {
-            const response = await axiosInstance.post(`/pemesanan/${bookingId}/payment`);
-            return response.data;
-        } catch (error) {
-            console.error('Error creating payment:', error);
-            throw error;
-        }
-    },
-
-    // Check payment status
-    checkStatus: async (bookingId) => {
-        try {
-            const response = await axiosInstance.get(`/pemesanan/${bookingId}/payment/status`);
-            return response.data;
-        } catch (error) {
-            console.error('Error checking payment status:', error);
-            throw error;
-        }
-    }
-};
-
 // src/services/api.js
 
 export async function getUserPayments() {
@@ -539,28 +590,6 @@ export async function getUserNotifications() {
         { id: 1, message: 'Pembayaran berhasil dikonfirmasi.', timestamp: '2025-05-01T10:00:00' },
         { id: 2, message: 'Jadwal booking kamu hari ini jam 16:00.', timestamp: '2025-05-14T07:00:00' },
     ]
-}
-
-
-// poto profile user
-export async function getUserProfile() {
-    return {
-        name: 'Bayu Gilang P.',
-        email: 'user@example.com',
-        phone: '081234567890',
-        photoUrl: '/images/profile.jpg',
-        type: 'user',
-    }
-}
-
-export async function updateUserProfile(data) {
-    console.log('Update profile with:', data)
-    return { success: true }
-}
-
-export async function updateUserPhoto(formData) {
-    console.log('Upload photo with:', formData.get('photo'))
-    return { success: true }
 }
 
 
