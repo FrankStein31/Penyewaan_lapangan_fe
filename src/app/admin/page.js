@@ -149,8 +149,18 @@ export default function AdminDashboard() {
                 });
 
             } catch (error) {
-                console.error('Error mengambil data dashboard:', error);
-                setError('Gagal mendapatkan data dashboard');
+                // Tambahkan log detail error dari response jika ada
+                if (error.response) {
+                    console.error('Error mengambil data dashboard:', error.response.data || error.message);
+                    setError(
+                        error.response.data?.message ||
+                        error.response.data?.error ||
+                        'Gagal mendapatkan data dashboard (500)'
+                    );
+                } else {
+                    console.error('Error mengambil data dashboard:', error);
+                    setError('Gagal mendapatkan data dashboard');
+                }
             } finally {
                 setIsLoading(false);
             }
