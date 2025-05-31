@@ -51,4 +51,5 @@ export function formatCurrency(amount, options = {}) {
     console.error('Error formatting currency:', error);
     return `Rp ${amount}`;
   }
+  
 } 

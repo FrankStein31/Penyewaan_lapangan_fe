@@ -46,7 +46,7 @@ axiosInstance.interceptors.response.use(
             data: error.response?.data,
             message: error.message
         });
-        
+
         // Jika error 401 (Unauthorized)
         if (error.response?.status === 401) {
             if (typeof window !== 'undefined') {
@@ -73,7 +73,7 @@ axiosInstance.interceptors.response.use(
                 }
             }
         }
-        
+
         return Promise.reject(error);
     }
 );
@@ -501,7 +501,7 @@ export const paymentService = {
     },
 
     // Midtrans payment
-    createPayment: async (bookingId) => {
+    createMidtransTransaction: async (bookingId, paymentData) => {
         try {
             const response = await axiosInstance.post(`/pemesanan/${bookingId}/payment`);
             return response.data;
@@ -562,5 +562,3 @@ export async function updateUserPhoto(formData) {
     console.log('Upload photo with:', formData.get('photo'))
     return { success: true }
 }
-
-

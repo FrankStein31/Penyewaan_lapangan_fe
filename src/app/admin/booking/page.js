@@ -24,7 +24,7 @@ export default function BookingAdmin() {
         try {
             setLoading(true);
             const response = await bookingService.getAll();
-            
+
             // Pastikan data ada dan dalam format yang benar
             let bookingsData = [];
             if (response && response.data) {
@@ -34,10 +34,10 @@ export default function BookingAdmin() {
                     bookingsData = response.data.data;
                 }
             }
-            
+
             // Urutkan booking berdasarkan tanggal terbaru
             bookingsData.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-            
+
             setBookings(bookingsData);
             setError(null);
         } catch (error) {
@@ -104,7 +104,7 @@ export default function BookingAdmin() {
             await bookingService.update(booking.id_pemesanan, {
                 status: newStatus
             });
-            
+
             showSnackbar(`Pemesanan berhasil ${isApproved ? 'diverifikasi' : 'ditolak'}`, 'success');
             fetchBookings();
             setShowModal(false);
@@ -321,17 +321,17 @@ export default function BookingAdmin() {
     return (
         <div className="flex min-h-screen bg-gray-50">
             <Sidebar />
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex flex-col flex-1 overflow-hidden">
                 <Topbar />
-                <main className="flex-1 overflow-auto pt-20">
+                <main className="flex-1 pt-20 overflow-auto">
                     <div className="px-6 py-4">
-                        <div className="flex justify-between items-center mb-6">
+                        <div className="flex items-center justify-between mb-6">
                             <h1 className="text-2xl font-bold text-gray-800">Manajemen Pemesanan</h1>
                             <button
                                 onClick={() => fetchBookings()}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center"
+                                className="flex items-center px-4 py-2 text-white transition bg-blue-600 rounded-md hover:bg-blue-700"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                                     <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
                                 </svg>
                                 Refresh
@@ -341,14 +341,14 @@ export default function BookingAdmin() {
                         {/* Loading State */}
                         {loading && (
                             <div className="flex justify-center p-8">
-                                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                                <div className="w-12 h-12 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin"></div>
                             </div>
                         )}
 
                         {/* Error State */}
                         {error && (
-                            <div className="mb-6 p-4 bg-red-100 border border-red-200 text-red-700 rounded-lg flex items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <div className="flex items-center p-4 mb-6 text-red-700 bg-red-100 border border-red-200 rounded-lg">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                                 </svg>
                                 {error}
@@ -357,27 +357,27 @@ export default function BookingAdmin() {
 
                         {/* Booking Table */}
                         {!loading && !error && (
-                            <div className="bg-white rounded-lg shadow overflow-hidden">
+                            <div className="overflow-hidden bg-white rounded-lg shadow">
                                 <div className="overflow-x-auto">
                                     <table className="min-w-full divide-y divide-gray-200">
                                         <thead className="bg-gray-50">
                                             <tr>
-                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                <th scope="col" className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                                                     ID
                                                 </th>
-                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                <th scope="col" className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                                                     Nama
                                                 </th>
-                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                <th scope="col" className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                                                     Tanggal
                                                 </th>
-                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                <th scope="col" className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                                                     Waktu
                                                 </th>
-                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                <th scope="col" className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                                                     Status
                                                 </th>
-                                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                <th scope="col" className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                                                     Aksi
                                                 </th>
                                             </tr>
@@ -439,7 +439,7 @@ export default function BookingAdmin() {
                                                 })
                                             ) : (
                                                 <tr>
-                                                    <td colSpan="6" className="px-6 py-12 text-center text-sm text-gray-500">
+                                                    <td colSpan="6" className="px-6 py-12 text-sm text-center text-gray-500">
                                                         Tidak ada data pemesanan
                                                     </td>
                                                 </tr>
@@ -456,12 +456,12 @@ export default function BookingAdmin() {
             {/* Modal */}
             {showModal && (
                 <div className="fixed inset-0 z-50 overflow-y-auto">
-                    <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                    <div className="flex items-end justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
                         <div className="fixed inset-0 transition-opacity" aria-hidden="true">
                             <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
                         </div>
                         <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-                        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                        <div className="inline-block overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg shadow-xl sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
                             <ModalContent />
                         </div>
                     </div>

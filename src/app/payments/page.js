@@ -1,66 +1,210 @@
-// src/app/User/payments/page.js
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import UserLayout from '@/components/user/UserLayout'
-import { Box, Typography, Card, CardContent, Grid, Button, Tab, Tabs, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material'
-import { formatDate, formatCurrency } from '@/lib/utils'
-import PaymentStatusBadge from '@/components/user/PaymentStatusBadge'
+import {
+  Box,
+  Typography,
+  Card,
+  CardContent,
+  Grid,
+  Button,
+  Tab,
+  Tabs,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Alert,
+  Chip,
+  Divider,
+  Paper,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  CircularProgress
+} from '@mui/material'
+import { formatDate, formatCurrency, formatDateTime } from '@/lib/utils'
 import SkeletonLoader from '@/components/common/SkeletonLoader'
 import EmptyState from '@/components/common/EmptyState'
-import { paymentService } from '@/services/api'
-import ReceiptIcon from '@mui/icons-material/Receipt'
-import HistoryIcon from '@mui/icons-material/History'
-import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
-import CloudDownloadIcon from '@mui/icons-material/CloudDownload'
-import InfoIcon from '@mui/icons-material/Info'
+import { bookingService, paymentService } from '@/services/api'
+import {
+  Receipt as ReceiptIcon,
+  History as HistoryIcon,
+  AccountBalanceWallet as AccountBalanceWalletIcon,
+  Info as InfoIcon,
+  CheckCircle as CheckCircleIcon,
+  PendingActions as PendingActionsIcon,
+  AccessTime as AccessTimeIcon,
+  LocationOn as LocationOnIcon,
+  CalendarToday as CalendarTodayIcon,
+  Payment as PaymentIcon,
+  CreditCard as CreditCardIcon,
+  QrCode as QrCodeIcon,
+  Money as MoneyIcon,
+  Security as SecurityIcon,
+  Person as PersonIcon,
+  Email as EmailIcon,
+  Phone as PhoneIcon,
+  Close as CloseIcon
+} from '@mui/icons-material'
 
 export default function PaymentsPage() {
   const { user } = useAuth()
   const [payments, setPayments] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [success, setSuccess] = useState(null)
   const [tabValue, setTabValue] = useState(0)
   const [detailDialog, setDetailDialog] = useState({
     open: false,
     payment: null
   })
-  const [uploadDialog, setUploadDialog] = useState({
+  const [paymentDialog, setPaymentDialog] = useState({
     open: false,
     payment: null,
-    file: null,
-    notes: ''
+    processing: false,
+    error: null,
+    snapEmbedded: false
   })
 
+  // Load Midtrans Snap script
   useEffect(() => {
-    fetchPayments()
-  }, [])
+    if (typeof window === 'undefined' || window.snap) return
 
-    const fetchPayments = async () => {
-    setLoading(true)
-    try {
-      const response = await paymentService.getUserPayments()
-      console.log('Data pembayaran:', response.data)
+    const scriptId = 'midtrans-snap-script'
+    if (document.getElementById(scriptId)) return
 
-      if (response && response.data) {
-        setPayments(response.data)
-      } else {
-        setPayments([])
-      }
-        setError(null)
-      } catch (err) {
-      console.error('Error fetching payments:', err)
-        setError('Gagal memuat data pembayaran. Silakan coba lagi.')
-      } finally {
-        setLoading(false)
-      }
+    const script = document.createElement('script')
+    script.id = scriptId
+    // Use staging for development, production for live
+    script.src = process.env.NEXT_PUBLIC_MIDTRANS_SNAP_URL || 'https://app.stg.midtrans.com/snap/snap.js'
+    script.setAttribute('data-client-key', process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || 'SET_YOUR_CLIENT_KEY_HERE')
+    script.async = true
+
+    script.onload = () => {
+      console.log('Midtrans script loaded successfully')
     }
 
+    script.onerror = () => {
+      console.error('Failed to load Midtrans script')
+      setError('Gagal memuat sistem pembayaran. Silakan refresh halaman.')
+    }
+
+    document.head.appendChild(script)
+
+    return () => {
+      const scriptElement = document.getElementById(scriptId)
+      if (scriptElement) {
+        document.head.removeChild(scriptElement)
+      }
+    }
+  }, [])
+
+  // Fungsi untuk mengkonversi booking ke payment format
+  const convertBookingToPayment = useCallback((booking) => {
+    // Hitung status pembayaran berdasarkan status booking
+    let paymentStatus = 'pending'
+    let transactionStatus = 'pending'
+
+    if (booking.status === 'diverifikasi' || booking.status === 'selesai') {
+      paymentStatus = 'paid'
+      transactionStatus = 'settlement'
+    } else if (booking.status === 'ditolak' || booking.status === 'dibatalkan') {
+      paymentStatus = 'cancelled'
+      transactionStatus = 'cancel'
+    } else if (booking.status === 'expired') {
+      paymentStatus = 'expired'
+      transactionStatus = 'expire'
+    }
+
+    // Format waktu sesi
+    const sesi = booking.sesi || []
+    sesi.sort((a, b) => a.jam_mulai.localeCompare(b.jam_mulai))
+    const waktuMulai = sesi.length > 0 ? sesi[0].jam_mulai : "-"
+    const waktuSelesai = sesi.length > 0 ? sesi[sesi.length - 1].jam_selesai : "-"
+
+    return {
+      id: booking.id_pemesanan,
+      booking_id: booking.id_pemesanan,
+      amount: booking.total_harga,
+      status: paymentStatus,
+      transaction_status: transactionStatus,
+      booking_status: booking.status,
+      payment_type: booking.payment_type || 'midtrans',
+      snap_token: booking.snap_token || null,
+      transaction_id: booking.transaction_id || null,
+      date: booking.created_at,
+      due_date: booking.due_date || null,
+      field_name: booking.lapangan?.nama || 'Lapangan',
+      schedule: `${formatDate(booking.tanggal)} - ${waktuMulai} - ${waktuSelesai}`,
+      schedule_date: booking.tanggal,
+      schedule_time: `${waktuMulai} - ${waktuSelesai}`,
+      method: 'Midtrans Payment Gateway',
+      customer_name: booking.nama_pelanggan,
+      customer_email: booking.email,
+      customer_phone: booking.no_hp,
+      notes: booking.catatan || null,
+      sessions: sesi,
+      paid_at: booking.paid_at || null
+    }
+  }, [])
+
+  // Fungsi untuk mengambil data pembayaran dari booking
+  const fetchPayments = useCallback(async () => {
+    if (!user) return
+
+    try {
+      setLoading(true)
+      setError(null)
+
+      // Ambil data booking untuk user yang sedang login
+      const response = await bookingService.getAll()
+      console.log('Bookings response:', response)
+
+      let bookingsData = []
+      if (response && response.data) {
+        if (Array.isArray(response.data)) {
+          bookingsData = response.data
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          bookingsData = response.data.data
+        }
+      }
+
+      // Filter booking berdasarkan user yang sedang login
+      const userBookings = bookingsData.filter(booking =>
+        booking.email === user?.email || booking.user_id === user?.id
+      )
+
+      // Konversi booking ke format payment
+      const formattedPayments = userBookings.map(convertBookingToPayment)
+
+      // Urutkan berdasarkan tanggal terbaru
+      formattedPayments.sort((a, b) => new Date(b.date) - new Date(a.date))
+
+      setPayments(formattedPayments)
+    } catch (err) {
+      console.error('Error fetching payments:', err)
+      setError('Gagal memuat data pembayaran. Silakan coba lagi.')
+      setPayments([])
+    } finally {
+      setLoading(false)
+    }
+  }, [user, convertBookingToPayment])
+
+  // Effect untuk memuat data saat komponen pertama kali dimuat
+  useEffect(() => {
+    fetchPayments()
+  }, [fetchPayments])
+
+  // Handler untuk perubahan tab
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue)
   }
 
+  // Handler untuk membuka dialog detail
   const handleOpenDetailDialog = (payment) => {
     setDetailDialog({
       open: true,
@@ -68,6 +212,7 @@ export default function PaymentsPage() {
     })
   }
 
+  // Handler untuk menutup dialog detail
   const handleCloseDetailDialog = () => {
     setDetailDialog({
       open: false,
@@ -75,132 +220,290 @@ export default function PaymentsPage() {
     })
   }
 
-  const handleOpenUploadDialog = (payment) => {
-    setUploadDialog({
+  // Handler untuk membuka dialog pembayaran
+  const handleOpenPaymentDialog = (payment) => {
+    setPaymentDialog({
       open: true,
       payment,
-      file: null,
-      notes: ''
-    })
-  }
+      processing: false,
+      error: null,
+      snapEmbedded: false
+    });
+  };
 
-  const handleCloseUploadDialog = () => {
-    setUploadDialog({
+  // Handler untuk menutup dialog pembayaran
+  const handleClosePaymentDialog = () => {
+    setPaymentDialog({
       open: false,
       payment: null,
-      file: null,
-      notes: ''
+      processing: false,
+      error: null,
+      snapEmbedded: false
     })
   }
 
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setUploadDialog({
-        ...uploadDialog,
-        file: e.target.files[0]
-      })
+  // Handler untuk melanjutkan pembayaran dari detail dialog
+  const handleContinuePayment = () => {
+    if (detailDialog.payment) {
+      handleCloseDetailDialog()
+      handleOpenPaymentDialog(detailDialog.payment)
     }
   }
 
-  const handleNotesChange = (e) => {
-    setUploadDialog({
-      ...uploadDialog,
-      notes: e.target.value
-    })
-  }
-
-  const handleUploadPaymentProof = async () => {
-    if (!uploadDialog.file) {
-      alert('Mohon pilih file bukti pembayaran')
-      return
-    }
+  // Handler untuk memproses pembayaran dengan Midtrans (Embedded)
+  const handleProcessPayment = async () => {
+    if (!paymentDialog.payment) return
 
     try {
-      const formData = new FormData()
-      formData.append('bukti_pembayaran', uploadDialog.file)
-      formData.append('catatan', uploadDialog.notes)
-      formData.append('id_pembayaran', uploadDialog.payment.id)
+      setPaymentDialog(prev => ({
+        ...prev,
+        processing: true,
+        error: null
+      }))
 
-      await paymentService.uploadPaymentProof(formData)
+      // Jika sudah ada snap_token, gunakan yang ada
+      let snapToken = paymentDialog.payment.snap_token
 
-      alert('Bukti pembayaran berhasil diunggah')
-      handleCloseUploadDialog()
-    fetchPayments()
+      // Jika belum ada snap_token, request ke backend untuk membuat transaksi baru
+      if (!snapToken) {
+        const paymentData = {
+          booking_id: paymentDialog.payment.booking_id,
+          amount: paymentDialog.payment.amount,
+          customer_details: {
+            first_name: paymentDialog.payment.customer_name,
+            email: paymentDialog.payment.customer_email,
+            phone: paymentDialog.payment.customer_phone
+          },
+          item_details: {
+            name: `Booking ${paymentDialog.payment.field_name}`,
+            price: paymentDialog.payment.amount,
+            quantity: 1,
+            category: 'Sports Booking'
+          }
+        }
+
+        // Call API untuk membuat transaksi Midtrans
+        const response = await paymentService.createMidtransTransaction(paymentData)
+        snapToken = response.data.snap_token
+
+        // Update payment dengan snap_token baru
+        setPayments(prev => prev.map(p =>
+          p.id === paymentDialog.payment.id ? { ...p, snap_token: snapToken } : p
+        ))
+      }
+
+      // Pastikan snap sudah terload
+      if (!window.snap) {
+        throw new Error('Payment gateway is not ready. Please refresh the page.')
+      }
+
+      // Set processing selesai dan embed snap
+      setPaymentDialog(prev => ({
+        ...prev,
+        processing: false,
+        snapEmbedded: true
+      }))
+
+      // Embed Snap dengan callback
+      window.snap.embed(snapToken, {
+        embedId: 'snap-container',
+        onSuccess: function (result) {
+          console.log('Payment success:', result)
+          setSuccess('Pembayaran berhasil! Status booking akan diperbarui dalam beberapa saat.')
+          handleClosePaymentDialog()
+          fetchPayments()
+        },
+        onPending: function (result) {
+          console.log('Payment pending:', result)
+          setSuccess('Pembayaran sedang diproses. Silakan cek status pembayaran secara berkala.')
+          handleClosePaymentDialog()
+          fetchPayments()
+        },
+        onError: function (result) {
+          console.log('Payment error:', result)
+          setError('Terjadi kesalahan saat memproses pembayaran. Silakan coba lagi.')
+          handleClosePaymentDialog()
+        },
+        onClose: function () {
+          console.log('Payment popup closed')
+          handleClosePaymentDialog()
+          fetchPayments()
+        }
+      })
+
     } catch (err) {
-      console.error('Error uploading payment proof:', err)
-      alert('Gagal mengunggah bukti pembayaran. Silakan coba lagi.')
+      console.error('Error processing payment:', err)
+      setPaymentDialog(prev => ({
+        ...prev,
+        processing: false,
+        error: err.response?.data?.message || err.message || 'Gagal memproses pembayaran. Silakan coba lagi.'
+      }))
     }
   }
 
+  // Fungsi untuk mendapatkan warna status yang lebih detail
+  const getPaymentStatusColor = (status, transactionStatus, bookingStatus) => {
+    switch (transactionStatus) {
+      case 'settlement':
+      case 'capture':
+        return bookingStatus === 'selesai' ? 'success' : 'info'
+      case 'pending':
+        return 'warning'
+      case 'deny':
+      case 'cancel':
+      case 'expire':
+        return 'error'
+      case 'failure':
+        return 'error'
+      default:
+        return bookingStatus === 'menunggu verifikasi' ? 'warning' : 'default'
+    }
+  }
+
+  // Fungsi untuk mendapatkan label status yang lebih detail
+  const getPaymentStatusLabel = (status, transactionStatus, bookingStatus) => {
+    switch (transactionStatus) {
+      case 'settlement':
+      case 'capture':
+        return bookingStatus === 'selesai' ? 'Selesai' : 'Pembayaran Berhasil'
+      case 'pending':
+        return 'Menunggu Pembayaran'
+      case 'deny':
+        return 'Pembayaran Ditolak'
+      case 'cancel':
+        return 'Pembayaran Dibatalkan'
+      case 'expire':
+        return 'Pembayaran Kedaluwarsa'
+      case 'failure':
+        return 'Pembayaran Gagal'
+      default:
+        switch (bookingStatus) {
+          case 'menunggu verifikasi':
+            return 'Menunggu Verifikasi'
+          case 'diverifikasi':
+            return 'Pembayaran Diverifikasi'
+          case 'selesai':
+            return 'Selesai'
+          case 'ditolak':
+            return 'Ditolak'
+          case 'dibatalkan':
+            return 'Dibatalkan'
+          default:
+            return status === 'paid' ? 'Sudah Dibayar' : 'Menunggu Pembayaran'
+        }
+    }
+  }
+
+  // Fungsi untuk cek apakah bisa melakukan pembayaran
+  const canMakePayment = (payment) => {
+    if (!payment) return false; // tambahkan validasi awal
+
+    return payment.status === 'pending' &&
+      (payment.transaction_status === 'pending' || !payment.transaction_status) &&
+      payment.booking_status !== 'ditolak' &&
+      payment.booking_status !== 'dibatalkan' &&
+      payment.booking_status !== 'expired' &&
+      (!payment.due_date || new Date(payment.due_date) > new Date())
+  }
+
+  // Filter pembayaran berdasarkan tab yang dipilih
   const filteredPayments = payments.filter(payment => {
-    if (tabValue === 0) return true
-    if (tabValue === 1) return payment.status === 'pending'
-    if (tabValue === 2) return payment.status === 'paid'
-    return true
+    switch (tabValue) {
+      case 1: // Menunggu Pembayaran
+        return payment.status === 'pending' || payment.transaction_status === 'pending'
+      case 2: // Sudah Dibayar
+        return payment.status === 'paid' ||
+          payment.transaction_status === 'settlement' ||
+          payment.transaction_status === 'capture' ||
+          payment.booking_status === 'diverifikasi' ||
+          payment.booking_status === 'selesai'
+      case 3: // Gagal/Dibatalkan
+        return payment.status === 'cancelled' ||
+          payment.status === 'expired' ||
+          payment.transaction_status === 'cancel' ||
+          payment.transaction_status === 'deny' ||
+          payment.transaction_status === 'expire' ||
+          payment.transaction_status === 'failure' ||
+          payment.booking_status === 'ditolak' ||
+          payment.booking_status === 'dibatalkan'
+      default: // Semua
+        return true
+    }
   })
 
   return (
     <UserLayout title="Pembayaran">
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={4}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Box sx={{ bgcolor: 'primary.main', p: 1, borderRadius: 1, color: 'white', mr: 2 }}>
-                  <ReceiptIcon />
-                </Box>
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Total Pembayaran
-                  </Typography>
-                  <Typography variant="h6">
-                    {payments.length}
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Box sx={{ bgcolor: 'warning.main', p: 1, borderRadius: 1, color: 'white', mr: 2 }}>
-                  <HistoryIcon />
-                </Box>
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Menunggu Pembayaran
-                  </Typography>
-                  <Typography variant="h6">
-                    {payments.filter(p => p.status === 'pending').length}
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Box sx={{ bgcolor: 'success.main', p: 1, borderRadius: 1, color: 'white', mr: 2 }}>
-                  <AccountBalanceWalletIcon />
-                </Box>
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Total Dibayar
-                  </Typography>
-                  <Typography variant="h6">
-                    {formatCurrency(payments.filter(p => p.status === 'paid').reduce((sum, item) => sum + item.amount, 0))}
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      {/* Success Alert */}
+      {success && (
+        <Alert
+          severity="success"
+          sx={{ mb: 3 }}
+          onClose={() => setSuccess(null)}
+          action={
+            <Button color="inherit" size="small" onClick={() => setSuccess(null)}>
+              TUTUP
+            </Button>
+          }
+        >
+          {success}
+        </Alert>
+      )}
 
+      {/* Error Alert */}
+      {error && (
+        <Alert
+          severity="error"
+          sx={{ mb: 3 }}
+          onClose={() => setError(null)}
+          action={
+            <Button color="inherit" size="small" onClick={() => setError(null)}>
+              TUTUP
+            </Button>
+          }
+        >
+          {error}
+        </Alert>
+      )}
+
+      {/* Payment Info Card */}
+      <Card sx={{ mb: 3, bgcolor: 'primary.main', color: 'primary.contrastText' }}>
+        <CardContent>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <PaymentIcon sx={{ mr: 2, fontSize: 32 }} />
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                Pembayaran Mudah & Aman
+              </Typography>
+              <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                Powered by Midtrans - Metode pembayaran lengkap dan terpercaya
+              </Typography>
+            </Box>
+          </Box>
+
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12} sm={4}>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <CreditCardIcon sx={{ mr: 1, opacity: 0.8 }} />
+                <Typography variant="body2">Kartu Kredit/Debit</Typography>
+              </Box>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <QrCodeIcon sx={{ mr: 1, opacity: 0.8 }} />
+                <Typography variant="body2">QRIS & E-Wallet</Typography>
+              </Box>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <MoneyIcon sx={{ mr: 1, opacity: 0.8 }} />
+                <Typography variant="body2">Virtual Account</Typography>
+              </Box>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
+
+      {/* Payment List */}
       <Card>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs
@@ -208,43 +511,106 @@ export default function PaymentsPage() {
             onChange={handleTabChange}
             variant="scrollable"
             scrollButtons="auto"
+            aria-label="payment tabs"
           >
-            <Tab label="Semua" />
-            <Tab label="Menunggu Pembayaran" />
-            <Tab label="Sudah Dibayar" />
+            <Tab
+              label="Semua"
+              icon={<HistoryIcon />}
+              iconPosition="start"
+            />
+            <Tab
+              label="Menunggu Pembayaran"
+              icon={<PendingActionsIcon />}
+              iconPosition="start"
+            />
+            <Tab
+              label="Sudah Dibayar"
+              icon={<CheckCircleIcon />}
+              iconPosition="start"
+            />
+            <Tab
+              label="Gagal/Dibatalkan"
+              icon={<InfoIcon />}
+              iconPosition="start"
+            />
           </Tabs>
         </Box>
 
         <CardContent>
           {loading ? (
-            <SkeletonLoader count={3} />
-          ) : error ? (
+            <SkeletonLoader count={5} />
+          ) : error && payments.length === 0 ? (
             <Box sx={{ p: 2, textAlign: 'center' }}>
-              <Typography color="error">{error}</Typography>
-              <Button variant="outlined" onClick={fetchPayments} sx={{ mt: 2 }}>
+              <Typography color="error" gutterBottom>{error}</Typography>
+              <Button
+                variant="outlined"
+                onClick={fetchPayments}
+                sx={{ mt: 2 }}
+                startIcon={<PendingActionsIcon />}
+              >
                 Coba Lagi
               </Button>
             </Box>
           ) : filteredPayments.length === 0 ? (
             <EmptyState
+              icon={<ReceiptIcon sx={{ fontSize: 60 }} />}
               title="Tidak ada data pembayaran"
-              message="Belum ada data pembayaran yang tersedia."
+              message={tabValue === 0 ?
+                "Anda belum memiliki riwayat pembayaran" :
+                tabValue === 1 ?
+                  "Tidak ada pembayaran yang menunggu" :
+                  tabValue === 2 ?
+                    "Belum ada pembayaran yang berhasil" :
+                    "Tidak ada pembayaran yang gagal/dibatalkan"}
             />
           ) : (
             <Box>
               {filteredPayments.map((payment) => (
-                <Card key={payment.id} sx={{ mb: 2, border: 1, borderColor: 'divider', boxShadow: 'none' }}>
+                <Card
+                  key={payment.id}
+                  sx={{
+                    mb: 2,
+                    border: 1,
+                    borderColor: canMakePayment(payment) ? 'warning.main' : 'divider',
+                    boxShadow: canMakePayment(payment) ? 2 : 'none',
+                    '&:hover': {
+                      boxShadow: 2
+                    }
+                  }}
+                >
                   <CardContent>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                    <Box sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      mb: 2
+                    }}>
                       <Box>
                         <Typography variant="subtitle1" fontWeight="medium">
-                          Booking #{payment.booking_id || '000000'}
+                          Booking #{payment.booking_id}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          {formatDate(payment.date)}
+                          {/* {formatDateTime(payment.date)} */}
                         </Typography>
+                        {payment.due_date && new Date(payment.due_date) < new Date() && payment.status === 'pending' && (
+                          <Typography variant="caption" color="error.main" sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
+                            <AccessTimeIcon fontSize="small" sx={{ mr: 0.5 }} />
+                            Jatuh tempo: {formatDate(payment.due_date)}
+                          </Typography>
+                        )}
+                        {payment.paid_at && (
+                          <Typography variant="caption" color="success.main" sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
+                            <CheckCircleIcon fontSize="small" sx={{ mr: 0.5 }} />
+                            Dibayar: {formatDateTime(payment.paid_at)}
+                          </Typography>
+                        )}
                       </Box>
-                      <PaymentStatusBadge status={payment.status} />
+                      <Chip
+                        label={getPaymentStatusLabel(payment.status, payment.transaction_status, payment.booking_status)}
+                        color={getPaymentStatusColor(payment.status, payment.transaction_status, payment.booking_status)}
+                        size="small"
+                        variant="outlined"
+                      />
                     </Box>
 
                     <Grid container spacing={2}>
@@ -255,51 +621,77 @@ export default function PaymentsPage() {
                         <Typography variant="h6" color="primary.main" fontWeight="bold">
                           {formatCurrency(payment.amount)}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Metode: {payment.method || 'Transfer Bank'}
+                        <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <PaymentIcon fontSize="small" color="action" />
+                          {payment.method}
                         </Typography>
+                        {payment.transaction_id && (
+                          <Typography variant="caption" color="text.secondary">
+                            ID Transaksi: {payment.transaction_id}
+                          </Typography>
+                        )}
                       </Grid>
                       <Grid item xs={12} sm={6}>
                         <Typography variant="body2" color="text.secondary">
-                          Booking Lapangan
+                          Detail Booking
                         </Typography>
-                        <Typography variant="body1">
-                          {payment.field_name || 'Lapangan A'}
+                        <Typography variant="body1" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <LocationOnIcon fontSize="small" color="action" />
+                          {payment.field_name}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {payment.schedule || 'Jadwal tidak tersedia'}
+                        <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <CalendarTodayIcon fontSize="small" color="action" />
+                          {formatDate(payment.schedule_date)}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <AccessTimeIcon fontSize="small" color="action" />
+                          {payment.schedule_time}
                         </Typography>
                       </Grid>
                     </Grid>
 
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                    {payment.notes && (
+                      <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                          Catatan:
+                        </Typography>
+                        <Typography variant="body2">
+                          {payment.notes}
+                        </Typography>
+                      </Box>
+                    )}
+
+                    <Box sx={{
+                      display: 'flex',
+                      justifyContent: 'flex-end',
+                      mt: 2,
+                      gap: 1
+                    }}>
                       <Button
                         size="small"
                         startIcon={<InfoIcon />}
                         onClick={() => handleOpenDetailDialog(payment)}
-                        sx={{ mr: 1 }}
                       >
                         Detail
                       </Button>
 
-                      {payment.status === 'pending' && (
+                      {canMakePayment(payment) && (
                         <Button
                           variant="contained"
-                          size="small"
                           color="primary"
-                          onClick={() => handleOpenUploadDialog(payment)}
-                        >
-                          Upload Bukti
-                        </Button>
-                      )}
-
-                      {payment.status === 'paid' && (
-                        <Button
-                          variant="outlined"
                           size="small"
-                          startIcon={<CloudDownloadIcon />}
+                          onClick={() => handleOpenPaymentDialog(payment)}
+                          startIcon={<PaymentIcon />}
+                          sx={{
+                            ml: 1,
+                            background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+                            boxShadow: '0 3px 5px 2px rgba(33, 203, 243, .3)',
+                            '&:hover': {
+                              background: 'linear-gradient(45deg, #1976D2 30%, #0097A7 90%)',
+                            }
+                          }}
                         >
-                          Invoice
+                          Bayar Sekarang
                         </Button>
                       )}
                     </Box>
@@ -311,204 +703,445 @@ export default function PaymentsPage() {
         </CardContent>
       </Card>
 
+      {/* Payment Detail Dialog */}
       <Dialog
         open={detailDialog.open}
         onClose={handleCloseDetailDialog}
-        maxWidth="sm"
+        maxWidth="md"
         fullWidth
       >
-        <DialogTitle>
+        <DialogTitle sx={{
+          bgcolor: 'primary.main',
+          color: 'primary.contrastText',
+          display: 'flex',
+          alignItems: 'center'
+        }}>
+          <ReceiptIcon sx={{ mr: 1 }} />
           Detail Pembayaran
         </DialogTitle>
         <DialogContent dividers>
           {detailDialog.payment && (
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <Typography variant="body2" color="text.secondary">
-                  ID Pembayaran
-                </Typography>
-                <Typography variant="body1" gutterBottom>
-                  #{detailDialog.payment.id}
-                </Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="body2" color="text.secondary">
-                  Status
-                </Typography>
-                <PaymentStatusBadge status={detailDialog.payment.status} />
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="body2" color="text.secondary">
-                  Tanggal Pembayaran
-                </Typography>
-                <Typography variant="body1" gutterBottom>
-                  {formatDate(detailDialog.payment.date)}
-                </Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="body2" color="text.secondary">
-                  Metode Pembayaran
-                </Typography>
-                <Typography variant="body1" gutterBottom>
-                  {detailDialog.payment.method || 'Transfer Bank'}
-                </Typography>
-              </Grid>
+            <Grid container spacing={3}>
+              {/* Payment Status */}
               <Grid item xs={12}>
-                <Typography variant="body2" color="text.secondary">
-                  Jumlah Pembayaran
-                </Typography>
-                <Typography variant="h6" color="primary.main" fontWeight="bold" gutterBottom>
-                  {formatCurrency(detailDialog.payment.amount)}
-                </Typography>
-              </Grid>
-              <Grid item xs={12}>
-                <Typography variant="body2" color="text.secondary">
-                  Detail Booking
-                </Typography>
-                <Typography variant="body1" gutterBottom>
-                  {detailDialog.payment.field_name || 'Lapangan A'}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  {detailDialog.payment.schedule || 'Jadwal tidak tersedia'}
-                </Typography>
-              </Grid>
-
-              {detailDialog.payment.status === 'paid' && (
-                <Grid item xs={12}>
-                  <Typography variant="body2" color="text.secondary">
-                    Bukti Pembayaran
-                  </Typography>
-                  <Box sx={{ mt: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
-                    <img
-                      src="/sample-payment-proof.jpg"
-                      alt="Bukti Pembayaran"
-                      style={{ width: '100%', height: 'auto', display: 'block' }}
+                <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h6" gutterBottom>
+                      Status Pembayaran
+                    </Typography>
+                    <Chip
+                      label={getPaymentStatusLabel(
+                        detailDialog.payment.status,
+                        detailDialog.payment.transaction_status,
+                        detailDialog.payment.booking_status
+                      )}
+                      color={getPaymentStatusColor(
+                        detailDialog.payment.status,
+                        detailDialog.payment.transaction_status,
+                        detailDialog.payment.booking_status
+                      )}
+                      variant="filled"
                     />
                   </Box>
+                </Paper>
+              </Grid>
+
+              {/* Booking Information */}
+              <Grid item xs={12} md={6}>
+                <Typography variant="h6" gutterBottom color="primary">
+                  Informasi Booking
+                </Typography>
+                <List dense>
+                  <ListItem>
+                    <ListItemIcon>
+                      <ReceiptIcon />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary="ID Booking"
+                      secondary={`#${detailDialog.payment.booking_id}`}
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <LocationOnIcon />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary="Lapangan"
+                      secondary={detailDialog.payment.field_name}
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <CalendarTodayIcon />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary="Tanggal & Waktu"
+                      secondary={`${formatDate(detailDialog.payment.schedule_date)} - ${detailDialog.payment.schedule_time}`}
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <AccountBalanceWalletIcon />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary="Total Pembayaran"
+                      secondary={formatCurrency(detailDialog.payment.amount)}
+                      secondaryTypographyProps={{
+                        color: 'primary.main',
+                        fontWeight: 'bold',
+                        fontSize: '1.1rem'
+                      }}
+                    />
+                  </ListItem>
+                </List>
+              </Grid>
+
+              {/* Customer Information */}
+              <Grid item xs={12} md={6}>
+                <Typography variant="h6" gutterBottom color="primary">
+                  Informasi Pelanggan
+                </Typography>
+                <List dense>
+                  <ListItem>
+                    <ListItemIcon>
+                      <PersonIcon />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary="Nama"
+                      secondary={detailDialog.payment.customer_name}
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <EmailIcon />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary="Email"
+                      secondary={detailDialog.payment.customer_email}
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <PhoneIcon />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary="Nomor Telepon"
+                      secondary={detailDialog.payment.customer_phone}
+                    />
+                  </ListItem>
+                  {/* Payment Method */}
+                  <ListItem>
+                    <ListItemIcon>
+                      <PaymentIcon />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary="Metode Pembayaran"
+                      secondary={detailDialog.payment.method}
+                    />
+                  </ListItem>
+                </List>
+              </Grid>
+
+              {/* Payment Timeline */}
+              <Grid item xs={12}>
+                <Typography variant="h6" gutterBottom color="primary">
+                  Timeline Pembayaran
+                </Typography>
+                <Paper sx={{ p: 2 }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {/* Created */}
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <CheckCircleIcon color="success" />
+                        <Divider orientation="vertical" flexItem sx={{ my: 1 }} />
+                      </Box>
+                      <Box>
+                        <Typography variant="subtitle2">Pesanan Dibuat</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {formatDateTime(detailDialog.payment.date)}
+                        </Typography>
+                      </Box>
+                    </Box>
+
+                    {/* Due Date */}
+                    {detailDialog.payment.due_date && (
+                      <Box sx={{ display: 'flex', gap: 2 }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <AccessTimeIcon color={
+                            new Date(detailDialog.payment.due_date) < new Date() &&
+                              detailDialog.payment.status === 'pending' ?
+                              'error' : 'warning'
+                          } />
+                          <Divider orientation="vertical" flexItem sx={{ my: 1 }} />
+                        </Box>
+                        <Box>
+                          <Typography variant="subtitle2">
+                            Batas Waktu Pembayaran
+                          </Typography>
+                          <Typography variant="body2" color={
+                            new Date(detailDialog.payment.due_date) < new Date() &&
+                              detailDialog.payment.status === 'pending' ?
+                              'error' : 'text.secondary'
+                          }>
+                            {formatDateTime(detailDialog.payment.due_date)}
+                            {new Date(detailDialog.payment.due_date) < new Date() &&
+                              detailDialog.payment.status === 'pending' && (
+                                <Typography variant="caption" color="error" sx={{ ml: 1 }}>
+                                  (Telah lewat batas waktu)
+                                </Typography>
+                              )}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    )}
+
+                    {/* Paid At */}
+                    {detailDialog.payment.paid_at && (
+                      <Box sx={{ display: 'flex', gap: 2 }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <CheckCircleIcon color="success" />
+                          <Divider orientation="vertical" flexItem sx={{ my: 1 }} />
+                        </Box>
+                        <Box>
+                          <Typography variant="subtitle2">Pembayaran Berhasil</Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {formatDateTime(detailDialog.payment.paid_at)}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    )}
+
+                    {/* Current Status */}
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        {detailDialog.payment.status === 'paid' ? (
+                          <CheckCircleIcon color="success" />
+                        ) : detailDialog.payment.status === 'pending' ? (
+                          <PendingActionsIcon color="warning" />
+                        ) : (
+                          <InfoIcon color="error" />
+                        )}
+                      </Box>
+                      <Box>
+                        <Typography variant="subtitle2">Status Saat Ini</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {getPaymentStatusLabel(
+                            detailDialog.payment.status,
+                            detailDialog.payment.transaction_status,
+                            detailDialog.payment.booking_status
+                          )}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                </Paper>
+              </Grid>
+
+              {/* Session Details */}
+              {detailDialog.payment.sessions && detailDialog.payment.sessions.length > 0 && (
+                <Grid item xs={12}>
+                  <Typography variant="h6" gutterBottom color="primary">
+                    Detail Sesi
+                  </Typography>
+                  <Paper sx={{ p: 2 }}>
+                    <List dense>
+                      {detailDialog.payment.sessions.map((session, index) => (
+                        <ListItem key={index}>
+                          <ListItemIcon>
+                            <AccessTimeIcon />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={`Sesi ${index + 1}`}
+                            secondary={`${session.jam_mulai} - ${session.jam_selesai} (${session.durasi} menit)`}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Paper>
+                </Grid>
+              )}
+
+              {/* Transaction ID */}
+              {detailDialog.payment.transaction_id && (
+                <Grid item xs={12}>
+                  <Typography variant="body2" color="text.secondary">
+                    <strong>ID Transaksi:</strong> {detailDialog.payment.transaction_id}
+                  </Typography>
                 </Grid>
               )}
             </Grid>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDetailDialog}>Tutup</Button>
-          {detailDialog.payment && detailDialog.payment.status === 'paid' && (
-            <Button variant="contained" startIcon={<CloudDownloadIcon />}>
-              Download Invoice
+          <Button
+            onClick={handleCloseDetailDialog}
+            startIcon={<CloseIcon />}
+          >
+            Tutup
+          </Button>
+          {canMakePayment(detailDialog.payment) && (
+            <Button
+              variant="contained"
+              onClick={handleContinuePayment}
+              startIcon={<PaymentIcon />}
+              sx={{
+                background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+                boxShadow: '0 3px 5px 2px rgba(33, 203, 243, .3)',
+                '&:hover': {
+                  background: 'linear-gradient(45deg, #1976D2 30%, #0097A7 90%)',
+                }
+              }}
+            >
+              Lanjutkan Pembayaran
             </Button>
           )}
         </DialogActions>
       </Dialog>
 
+      {/* Payment Dialog */}
       <Dialog
-        open={uploadDialog.open}
-        onClose={handleCloseUploadDialog}
-        maxWidth="sm"
+        open={paymentDialog.open}
+        onClose={handleClosePaymentDialog}
+        maxWidth="md"
         fullWidth
       >
-        <DialogTitle>
-          Upload Bukti Pembayaran
+        <DialogTitle sx={{
+          bgcolor: 'primary.main',
+          color: 'primary.contrastText',
+          display: 'flex',
+          alignItems: 'center'
+        }}>
+          <PaymentIcon sx={{ mr: 1 }} />
+          Proses Pembayaran
         </DialogTitle>
         <DialogContent dividers>
-          {uploadDialog.payment && (
+          {paymentDialog.processing ? (
+            <Box sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: 300
+            }}>
+              <CircularProgress size={60} thickness={4} sx={{ mb: 3 }} />
+              <Typography variant="h6" gutterBottom>
+                Menyiapkan Pembayaran...
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Harap tunggu sebentar
+              </Typography>
+            </Box>
+          ) : paymentDialog.error ? (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {paymentDialog.error}
+            </Alert>
+          ) : (
             <Box>
+              {paymentDialog.payment && (
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" gutterBottom>
+                    Ringkasan Pembayaran
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">
+                        ID Booking
+                      </Typography>
+                      <Typography variant="body1">
+                        #{paymentDialog.payment.booking_id}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">
+                        Total Pembayaran
+                      </Typography>
+                      <Typography variant="h6" color="primary.main">
+                        {formatCurrency(paymentDialog.payment.amount)}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">
+                        Lapangan
+                      </Typography>
+                      <Typography variant="body1">
+                        {paymentDialog.payment.field_name}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary">
+                        Tanggal & Waktu
+                      </Typography>
+                      <Typography variant="body1">
+                        {formatDate(paymentDialog.payment.schedule_date)} - {paymentDialog.payment.schedule_time}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                </Box>
+              )}
+
               <Typography variant="subtitle1" gutterBottom>
-                Detail Pembayaran
+                Pilih Metode Pembayaran
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Pembayaran aman melalui Midtrans
               </Typography>
 
-              <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">
-                    ID Pembayaran
-                  </Typography>
-                  <Typography variant="body1" gutterBottom>
-                    #{uploadDialog.payment.id}
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">
-                    Jumlah
-                  </Typography>
-                  <Typography variant="body1" fontWeight="medium" gutterBottom>
-                    {formatCurrency(uploadDialog.payment.amount)}
-                  </Typography>
-                </Grid>
-              </Grid>
-
-              <Typography variant="subtitle1" gutterBottom>
-                Informasi Rekening
-              </Typography>
-
-              <Box sx={{ mb: 3, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
-                <Typography variant="body2" gutterBottom>
-                  Silakan transfer sesuai jumlah yang tertera ke rekening berikut:
-                </Typography>
-                <Typography variant="body1" fontWeight="medium">
-                  Bank BCA: 123456789
-                </Typography>
-                <Typography variant="body1" fontWeight="medium">
-                  Atas Nama: PT Sport Center
-                </Typography>
-              </Box>
-
-              <Typography variant="subtitle1" gutterBottom>
-                Upload Bukti Transfer
-              </Typography>
-
-              <Box sx={{ mb: 3 }}>
-                <input
-                  accept="image/*"
-                  id="upload-payment-proof"
-                  type="file"
-                  hidden
-                  onChange={handleFileChange}
-                />
-                <label htmlFor="upload-payment-proof">
-                  <Button
-                    variant="outlined"
-                    component="span"
-                    sx={{ mb: 2 }}
-                  >
-                    Pilih File
-                  </Button>
-                </label>
-
-                <Typography variant="body2" color="text.secondary">
-                  {uploadDialog.file ? uploadDialog.file.name : 'Belum ada file dipilih'}
-                </Typography>
-
-                {uploadDialog.file && (
-                  <Box sx={{ mt: 2, maxWidth: '100%', maxHeight: 200, overflow: 'hidden' }}>
-                    <img
-                      src={URL.createObjectURL(uploadDialog.file)}
-                      alt="Preview"
-                      style={{ maxWidth: '100%', maxHeight: 200, objectFit: 'contain' }}
-                    />
+              {/* Midtrans Snap Container */}
+              <Box
+                id="snap-container"
+                sx={{
+                  minHeight: 400,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 1,
+                  p: 2
+                }}
+              >
+                {!paymentDialog.snapEmbedded && (
+                  <Box sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: 300
+                  }}>
+                    <SecurityIcon sx={{ fontSize: 60, color: 'text.disabled', mb: 2 }} />
+                    <Typography variant="h6" gutterBottom>
+                      Sistem Pembayaran Sedang Dimuat
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Harap tunggu sebentar...
+                    </Typography>
                   </Box>
                 )}
               </Box>
-
-              <TextField
-                fullWidth
-                label="Catatan (opsional)"
-                value={uploadDialog.notes}
-                onChange={handleNotesChange}
-                multiline
-                rows={3}
-                sx={{ mb: 2 }}
-              />
             </Box>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseUploadDialog}>Batal</Button>
           <Button
-            variant="contained"
-            onClick={handleUploadPaymentProof}
-            disabled={!uploadDialog.file}
+            onClick={handleClosePaymentDialog}
+            startIcon={<CloseIcon />}
+            disabled={paymentDialog.processing}
           >
-            Upload Bukti Pembayaran
+            Batal
           </Button>
+          {!paymentDialog.snapEmbedded && !paymentDialog.processing && !paymentDialog.error && (
+            <Button
+              variant="contained"
+              onClick={handleProcessPayment}
+              startIcon={<PaymentIcon />}
+              sx={{
+                background: 'linear-gradient(45deg, #4CAF50 30%, #8BC34A 90%)',
+                boxShadow: '0 3px 5px 2px rgba(76, 175, 80, .3)',
+                '&:hover': {
+                  background: 'linear-gradient(45deg, #388E3C 30%, #689F38 90%)',
+                }
+              }}
+            >
+              Proses Pembayaran
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </UserLayout>
