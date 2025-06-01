@@ -46,9 +46,9 @@ export default function BookingPage() {
   const formatDateForAPI = (date) => {
     // Pastikan kita menggunakan UTC untuk menghindari masalah timezone
     const utcDate = new Date(Date.UTC(
-        date.getFullYear(),
-        date.getMonth(),
-        date.getDate()
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate()
     ));
     const day = String(utcDate.getUTCDate()).padStart(2, '0');
     const month = String(utcDate.getUTCMonth() + 1).padStart(2, '0');
@@ -61,14 +61,14 @@ export default function BookingPage() {
     if (!date) return '-';
     // Pastikan kita menggunakan UTC untuk menghindari masalah timezone
     const utcDate = new Date(Date.UTC(
-        date.getFullYear(),
-        date.getMonth(),
-        date.getDate()
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate()
     ));
     return utcDate.toLocaleDateString('id-ID', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
     });
   };
 
@@ -84,13 +84,13 @@ export default function BookingPage() {
   // Handle form submit untuk booking
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Validasi form
     if (!bookingForm.name || !bookingForm.phone || !bookingForm.email) {
       alert("Mohon lengkapi data diri untuk melakukan booking");
       return;
     }
-    
+
     if (selectedTimeSlots.length === 0) {
       alert("Mohon pilih setidaknya satu sesi waktu");
       return;
@@ -99,10 +99,10 @@ export default function BookingPage() {
     try {
       // Tampilkan loading atau feedback
       setLoading(true);
-      
+
       // Kumpulkan semua ID sesi yang dipilih
       const selectedSessionIds = selectedTimeSlots.map(slot => slot.id_jam || slot.id_sesi || slot.id);
-      
+
       // Siapkan data untuk API
       const bookingData = {
         id_lapangan: selectedField.id,
@@ -113,19 +113,19 @@ export default function BookingPage() {
         no_hp: bookingForm.phone,
         catatan: bookingForm.notes,
       };
-      
+
       console.log("Mengirim data booking:", bookingData);
-      
+
       // Kirim request ke API
       const response = await bookingService.create(bookingData);
       console.log("Respons booking:", response);
-      
+
       // Booking berhasil
       alert("Booking berhasil dibuat! Silakan cek halaman dashboard untuk melihat booking Anda.");
-      
+
       // Close modal
       setShowBookingModal(false);
-      
+
       // Reset form dan selected slots
       setBookingForm({
         name: "",
@@ -137,16 +137,16 @@ export default function BookingPage() {
         paymentMethod: "transfer"
       });
       setSelectedTimeSlots([]);
-      
+
       // Redirect ke halaman dashboard
       router.push('/dashboard');
-      
+
     } catch (error) {
       console.error("Error creating booking:", error);
-      
+
       // Tampilkan pesan error
       let errorMessage = "Terjadi kesalahan saat membuat booking. Silakan coba lagi.";
-      
+
       if (error.response) {
         console.error("Full error response:", error.response);
         if (error.response.data && error.response.data.message) {
@@ -155,7 +155,7 @@ export default function BookingPage() {
           errorMessage = error.response.data.error;
         }
       }
-      
+
       alert(`Booking gagal: ${errorMessage}`);
     } finally {
       setLoading(false);
@@ -166,7 +166,7 @@ export default function BookingPage() {
   const handleSessionSelect = (session) => {
     // Cek apakah sesi sudah dipilih (toggle)
     const isSelected = selectedTimeSlots.some(s => s.id === session.id);
-    
+
     if (isSelected) {
       // Hapus sesi dari daftar yang dipilih
       setSelectedTimeSlots(selectedTimeSlots.filter(s => s.id !== session.id));
@@ -182,10 +182,10 @@ export default function BookingPage() {
       alert("Mohon pilih setidaknya satu sesi waktu terlebih dahulu");
       return;
     }
-    
+
     console.log("Data lapangan:", field);
     console.log("Data slot waktu yang dipilih:", selectedTimeSlots);
-    
+
     setSelectedField(field);
     setShowSessionsModal(false);
     setShowBookingModal(true);
@@ -205,66 +205,66 @@ export default function BookingPage() {
       console.log("Mengambil data lapangan...");
       const response = await fieldService.getAll();
       console.log("Response lapangan:", response);
-      
+
       if (response && response.data) {
         let fieldsData = response.data.data || response.data;
         console.log("Data lapangan:", fieldsData);
-        
+
         // Filter lapangan berdasarkan kategori yang dipilih
         let filteredFields = fieldsData;
         if (selectedCategory !== "all") {
           console.log("Filtering by category:", selectedCategory);
-          filteredFields = fieldsData.filter(field => 
+          filteredFields = fieldsData.filter(field =>
             field.kategori_id && field.kategori_id.toString() === selectedCategory
           );
           console.log("Filtered fields:", filteredFields);
         }
-        
+
         // Ambil semua sesi
         const sessionsResponse = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/sesi`);
         const allSessions = sessionsResponse.data.data || sessionsResponse.data || [];
         console.log("All sessions:", allSessions);
-        
+
         if (allSessions.length === 0) {
           setError("Tidak ada data sesi yang tersedia. Silakan hubungi administrator.");
           setFields([]);
           return;
         }
-        
+
         // Proses untuk mendapatkan ketersediaan setiap lapangan
         const fieldsWithAvailability = await Promise.all(
           filteredFields.map(async (field) => {
             if (!field.id) {
               console.error("Field ID tidak ditemukan:", field);
-              return { 
-                ...field, 
+              return {
+                ...field,
                 availableSessions: [],
-                error: "ID lapangan tidak valid" 
+                error: "ID lapangan tidak valid"
               };
             }
-            
+
             try {
               const formattedDate = formatDateForAPI(selectedDate);
               console.log(`Memeriksa ketersediaan untuk lapangan ID=${field.id}, tanggal=${formattedDate}`);
-              
+
               let availableSessions = [];
-              
+
               try {
                 const availabilityResponse = await axios.get(
-                  `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/pemesanan/check-availability`, 
-                  { 
-                    params: { 
-                      id_lapangan: field.id, 
-                      tanggal: formattedDate 
-                    } 
+                  `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/pemesanan/check-availability`,
+                  {
+                    params: {
+                      id_lapangan: field.id,
+                      tanggal: formattedDate
+                    }
                   }
                 );
-                
+
                 console.log(`Response ketersediaan untuk lapangan ${field.id}:`, availabilityResponse);
-                
+
                 if (availabilityResponse && availabilityResponse.data && availabilityResponse.data.data) {
                   console.log(`Data sesi mentah dari API:`, JSON.stringify(availabilityResponse.data.data));
-                  
+
                   // Pastikan format waktu sesi tersedia sudah benar sebelum disimpan
                   availableSessions = availabilityResponse.data.data.map(session => {
                     // Log data sesi mentah untuk debugging
@@ -272,7 +272,7 @@ export default function BookingPage() {
                     console.log(`id_jam:`, session.id_jam);
                     console.log(`jam_mulai mentah:`, session.jam_mulai);
                     console.log(`jam_selesai mentah:`, session.jam_selesai);
-                    
+
                     // JANGAN UBAH FORMAT JAM DARI DATABASE!
                     // Gunakan properti jam_mulai dan jam_selesai langsung dari database
                     const sessionData = {
@@ -285,38 +285,38 @@ export default function BookingPage() {
                       harga: session.harga || "0",
                       tersedia: true
                     };
-                    
+
                     console.log(`Data sesi final:`, sessionData);
                     return sessionData;
                   });
                 }
               } catch (availabilityError) {
                 console.error(`Error saat memeriksa ketersediaan lapangan ${field.id}:`, availabilityError);
-                return { 
-                  ...field, 
+                return {
+                  ...field,
                   availableSessions: [],
-                  sessions: [], 
-                  error: availabilityError.message || "Gagal memeriksa ketersediaan" 
+                  sessions: [],
+                  error: availabilityError.message || "Gagal memeriksa ketersediaan"
                 };
               }
-              
-              return { 
-                ...field, 
+
+              return {
+                ...field,
                 availableSessions,
                 sessions: availableSessions // Untuk kompatibilitas dengan kode lama
               };
             } catch (error) {
               console.error(`Error saat memeriksa ketersediaan lapangan ${field.id}:`, error);
-              return { 
-                ...field, 
+              return {
+                ...field,
                 availableSessions: [],
                 sessions: [], // Untuk kompatibilitas dengan kode lama
-                error: error.message || "Gagal memeriksa ketersediaan" 
+                error: error.message || "Gagal memeriksa ketersediaan"
               };
             }
           })
         );
-        
+
         console.log("Data lapangan dengan ketersediaan:", fieldsWithAvailability);
         setFields(fieldsWithAvailability);
       } else {
@@ -340,11 +340,11 @@ export default function BookingPage() {
       console.log("Mengambil data kategori...");
       const response = await categoryService.getAll();
       console.log("Response kategori:", response);
-      
+
       if (response && response.data) {
         // Coba akses data dengan berbagai format response yang mungkin
         let categoriesData = [];
-        
+
         if (Array.isArray(response.data)) {
           console.log("Data kategori adalah array:", response.data);
           categoriesData = response.data;
@@ -359,14 +359,14 @@ export default function BookingPage() {
             categoriesData = Object.values(response.data);
           }
         }
-        
+
         // Set data kategori
         console.log("Data kategori setelah diproses:", categoriesData);
-        
+
         // Pastikan data valid dengan id dan nama_kategori
         const validCategories = categoriesData.filter(cat => cat && cat.id && cat.nama_kategori);
         console.log("Kategori valid:", validCategories);
-        
+
         setCategories(validCategories);
       } else {
         console.log("Tidak ada data kategori dalam response");
@@ -401,16 +401,16 @@ export default function BookingPage() {
   const filteredFields = selectedCategory === "all"
     ? fields
     : fields.filter(field => {
-        // Cek apakah field memiliki kategori_id, jika tidak coba gunakan properti lain
-        return field.kategori_id === parseInt(selectedCategory) || 
-               field.id_kategori === parseInt(selectedCategory) ||
-               (field.kategori && field.kategori.id === parseInt(selectedCategory));
-      });
+      // Cek apakah field memiliki kategori_id, jika tidak coba gunakan properti lain
+      return field.kategori_id === parseInt(selectedCategory) ||
+        field.id_kategori === parseInt(selectedCategory) ||
+        (field.kategori && field.kategori.id === parseInt(selectedCategory));
+    });
 
   // Fungsi untuk memformat waktu dari sesi
   const formatSessionTime = (timeStr) => {
     if (!timeStr) return '';
-    
+
     try {
       // Menangani kasus tanggal dan waktu lengkap seperti "2025-05-16T07:00:00.000000Z"
       if (timeStr.includes('T') && timeStr.includes('Z')) {
@@ -437,20 +437,20 @@ export default function BookingPage() {
   const parse_time = (timeInput) => {
     // Jika input kosong, return string kosong
     if (!timeInput) return '';
-    
+
     try {
       // Konversi ke string untuk memastikan
       const timeStr = String(timeInput);
-      
+
       // Coba mengekstrak dengan regex untuk mendapatkan jam dan menit
       const timeRegex = /(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/;
       const match = timeStr.match(timeRegex);
-      
+
       if (match) {
         // Format dengan padding
         return `${match[1].padStart(2, '0')}:${match[2].padStart(2, '0')}`;
       }
-      
+
       // Jika tidak berhasil, gunakan pendekatan alternatif
       if (timeStr.includes('T')) {
         // Format ISO
@@ -463,7 +463,7 @@ export default function BookingPage() {
           return parts[1].substring(0, 5);
         }
       }
-      
+
       // Jika tidak ada format yang cocok
       console.error("Format waktu tidak dapat diparse:", timeStr);
       return "00:00";
@@ -479,29 +479,29 @@ export default function BookingPage() {
       setSelectedField(field);
       setLoadingSessions(true);
       setError(null);
-      
+
       const formattedDate = formatDateForAPI(selectedDate);
       console.log(`Memeriksa ketersediaan untuk lapangan ID=${field.id}, tanggal=${formattedDate}`);
-      
+
       // Tambahkan parameter debugging
-      const params = { 
-        id_lapangan: field.id, 
+      const params = {
+        id_lapangan: field.id,
         tanggal: formattedDate,
         debug: true  // Tambahkan parameter debugging
       };
-      
+
       console.log("Mengirim request dengan params:", params);
-      
+
       const availabilityResponse = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/pemesanan/check-availability`, 
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/pemesanan/check-availability`,
         { params }
       );
-      
+
       if (availabilityResponse?.data?.data) {
         // Log seluruh respons untuk debugging
         console.log("Respons lengkap dari API:", availabilityResponse);
         console.log("Data sesi dari API (raw):", JSON.stringify(availabilityResponse.data.data));
-        
+
         // Tambahkan debugging untuk setiap field
         availabilityResponse.data.data.forEach((session, index) => {
           console.log(`Sesi ${index + 1}:`, {
@@ -512,17 +512,17 @@ export default function BookingPage() {
             tipe_data_jam_selesai: typeof session.jam_selesai
           });
         });
-        
+
         const sessionsData = availabilityResponse.data.data.map(session => {
           // Log data mentah setiap sesi untuk debugging
           console.log(`Data sesi mentah:`, session);
-          
+
           // Extract waktu dari format lengkap menggunakan fungsi parse_time
           const formattedStart = parse_time(session.jam_mulai);
           const formattedEnd = parse_time(session.jam_selesai);
-          
+
           console.log(`Waktu setelah diformat - Mulai: ${formattedStart}, Selesai: ${formattedEnd}`);
-          
+
           // Proses data sesi untuk tampilan
           return {
             ...session,
@@ -537,7 +537,7 @@ export default function BookingPage() {
             tersedia: session.tersedia === undefined ? true : session.tersedia
           };
         });
-        
+
         console.log("Data sesi setelah diproses:", sessionsData);
         setAvailableSessions(sessionsData);
         setShowSessionsModal(true);
@@ -570,29 +570,29 @@ export default function BookingPage() {
               Cari dan Booking Lapangan
             </Typography>
           </Box>
-          
-          <Box sx={{ 
-            display: 'flex', 
-            flexDirection: {xs: 'column', md: 'row'}, 
-            justifyContent: 'space-between', 
-            alignItems: {xs: 'flex-start', md: 'center'}, 
+
+          <Box sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', md: 'row' },
+            justifyContent: 'space-between',
+            alignItems: { xs: 'flex-start', md: 'center' },
             gap: 2.5
           }}>
             {/* Date Selector */}
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
               gap: 1,
               py: 1.25,
-              px: 2.5, 
+              px: 2.5,
               bgcolor: 'background.paper',
               borderRadius: '12px',
               boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
               border: '1px solid rgba(0,0,0,0.04)',
-              width: {xs: '100%', md: 'auto'}
+              width: { xs: '100%', md: 'auto' }
             }}>
-              <Button 
-                variant="outlined" 
+              <Button
+                variant="outlined"
                 onClick={() => changeDate(-1)}
                 size="small"
                 sx={{
@@ -611,8 +611,8 @@ export default function BookingPage() {
                 <Typography variant="subtitle1" fontWeight="bold" sx={{ color: 'primary.main' }}>{getDayName(selectedDate)}</Typography>
                 <Typography variant="body2" color="text.secondary">{formatDate(selectedDate)}</Typography>
               </Box>
-              <Button 
-                variant="outlined" 
+              <Button
+                variant="outlined"
                 onClick={() => changeDate(1)}
                 size="small"
                 sx={{
@@ -630,9 +630,9 @@ export default function BookingPage() {
             </Box>
 
             {/* Category Filter */}
-            <Box sx={{ 
-              display: 'flex', 
-              gap: 1.5, 
+            <Box sx={{
+              display: 'flex',
+              gap: 1.5,
               flexWrap: 'wrap',
               bgcolor: 'background.paper',
               py: 1.25,
@@ -640,7 +640,7 @@ export default function BookingPage() {
               borderRadius: '12px',
               boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
               border: '1px solid rgba(0,0,0,0.04)',
-              width: {xs: '100%', md: 'auto'}
+              width: { xs: '100%', md: 'auto' }
             }}>
               <Button
                 variant={selectedCategory === "all" ? "contained" : "text"}
@@ -662,11 +662,11 @@ export default function BookingPage() {
               >
                 Semua
               </Button>
-              
+
               {/* Kategori dinamis dari API */}
               {loadingCategories ? (
                 <Box sx={{ display: 'flex', alignItems: 'center', px: 2 }}>
-                  <div className="animate-pulse w-16 h-8 bg-gray-200 rounded-full"></div>
+                  <div className="w-16 h-8 bg-gray-200 rounded-full animate-pulse"></div>
                 </Box>
               ) : (
                 categories.map((category) => (
@@ -702,13 +702,13 @@ export default function BookingPage() {
       <Box sx={{ position: 'relative' }}>
         {/* Loading state */}
         {loading && (
-          <Box sx={{ 
-            display: 'flex', 
+          <Box sx={{
+            display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'center', 
-            alignItems: 'center', 
+            justifyContent: 'center',
+            alignItems: 'center',
             py: 10,
-            minHeight: '300px' 
+            minHeight: '300px'
           }}>
             <Box sx={{
               width: '60px',
@@ -739,14 +739,14 @@ export default function BookingPage() {
 
         {/* Error state */}
         {!loading && error && (
-          <Card sx={{ 
-            p: 5, 
+          <Card sx={{
+            p: 5,
             textAlign: 'center',
             borderRadius: '12px',
             boxShadow: '0 6px 16px rgba(0,0,0,0.08)',
             border: '1px solid rgba(0,0,0,0.04)'
           }}>
-            <Box sx={{ 
+            <Box sx={{
               display: 'flex',
               justifyContent: 'center',
               mb: 3,
@@ -759,8 +759,8 @@ export default function BookingPage() {
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
               Silakan coba lagi nanti atau hubungi administrator.
             </Typography>
-            <Button 
-              variant="outlined" 
+            <Button
+              variant="outlined"
               onClick={fetchFieldsWithAvailability}
               startIcon={<svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -773,14 +773,14 @@ export default function BookingPage() {
 
         {/* No fields state */}
         {!loading && !error && filteredFields.length === 0 && (
-          <Card sx={{ 
-            p: 5, 
+          <Card sx={{
+            p: 5,
             textAlign: 'center',
             borderRadius: '12px',
             boxShadow: '0 6px 16px rgba(0,0,0,0.08)',
             border: '1px solid rgba(0,0,0,0.04)'
           }}>
-            <Box sx={{ 
+            <Box sx={{
               display: 'flex',
               justifyContent: 'center',
               mb: 3,
@@ -798,26 +798,26 @@ export default function BookingPage() {
 
         {/* Fields Grid */}
         {!loading && !error && filteredFields.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {filteredFields.map((field) => (
               <div key={field.id} className="w-full">
-                <Card sx={{ 
+                <Card sx={{
                   height: 400,
                   width: '100%',
                   display: 'flex',
                   flexDirection: 'column',
-                  borderRadius: '12px', 
+                  borderRadius: '12px',
                   overflow: 'hidden',
                   boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                  transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out', 
-                  '&:hover': { 
-                    transform: 'translateY(-5px)', 
-                    boxShadow: '0 12px 20px rgba(0,0,0,0.1)' 
-                  } 
+                  transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
+                  '&:hover': {
+                    transform: 'translateY(-5px)',
+                    boxShadow: '0 12px 20px rgba(0,0,0,0.1)'
+                  }
                 }}>
                   {/* Image section with fixed height */}
-                  <Box 
-                    sx={{ 
+                  <Box
+                    sx={{
                       width: '100%',
                       height: 160,
                       backgroundColor: '#111111',
@@ -827,11 +827,11 @@ export default function BookingPage() {
                       backgroundRepeat: 'no-repeat'
                     }}
                   />
-                  
+
                   {/* Content section with fixed layout */}
-                  <CardContent sx={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
+                  <CardContent sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
                     p: 2,
                     pt: 2,
                     pb: 2,
@@ -840,8 +840,8 @@ export default function BookingPage() {
                   }}>
                     {/* Title and price section */}
                     <Box sx={{ mb: 1 }}>
-                      <Typography variant="h6" component="h3" sx={{ 
-                        fontWeight: 'bold', 
+                      <Typography variant="h6" component="h3" sx={{
+                        fontWeight: 'bold',
                         fontSize: '1rem',
                         mb: 0.5,
                         overflow: 'hidden',
@@ -850,7 +850,7 @@ export default function BookingPage() {
                       }}>
                         {field.nama}
                       </Typography>
-                      
+
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                           <Chip
@@ -871,10 +871,10 @@ export default function BookingPage() {
                         </Typography>
                       </Box>
                     </Box>
-                    
+
                     {/* Description with fixed height */}
-                    <Typography variant="body2" sx={{ 
-                      color: 'text.secondary', 
+                    <Typography variant="body2" sx={{
+                      color: 'text.secondary',
                       fontStyle: field.deskripsi ? 'normal' : 'italic',
                       display: '-webkit-box',
                       WebkitLineClamp: 2,
@@ -892,9 +892,9 @@ export default function BookingPage() {
                       <Typography variant="caption" color="text.secondary" fontWeight="bold" sx={{ display: 'block', mb: 0.5 }}>
                         Fasilitas:
                       </Typography>
-                      <Box sx={{ 
-                        display: 'flex', 
-                        flexWrap: 'wrap', 
+                      <Box sx={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
                         gap: 0.5,
                         height: 50,
                         overflow: 'hidden'
@@ -905,8 +905,8 @@ export default function BookingPage() {
                               key={fasilitas.id}
                               label={fasilitas.nama_fasilitas}
                               size="small"
-                              sx={{ 
-                                bgcolor: 'rgba(25, 118, 210, 0.08)', 
+                              sx={{
+                                bgcolor: 'rgba(25, 118, 210, 0.08)',
                                 color: 'primary.main',
                                 fontSize: '0.7rem',
                                 height: 24
@@ -962,8 +962,8 @@ export default function BookingPage() {
           }
         }}
       >
-        <Box sx={{ 
-          p: 3, 
+        <Box sx={{
+          p: 3,
           background: 'linear-gradient(135deg, #7367f0 0%, #9e95f5 100%)',
           color: 'white',
           display: 'flex',
@@ -981,8 +981,8 @@ export default function BookingPage() {
             )}
           </div>
           {selectedTimeSlots.length > 0 && (
-            <Button 
-              variant="contained" 
+            <Button
+              variant="contained"
               color="success"
               onClick={() => openBookingModal(selectedField)}
               sx={{
@@ -1025,27 +1025,27 @@ export default function BookingPage() {
                     {availableSessions.map((session) => {
                       // Cek apakah sesi ini telah dipilih
                       const isSelected = selectedTimeSlots.some(s => s.id === session.id);
-                      
+
                       // Tentukan pesan status untuk sesi yang tidak tersedia
                       let statusMessage = '';
                       if (!session.tersedia) {
-                          if (session.alasan === 'expired') {
-                              statusMessage = 'Waktu telah lewat';
-                          } else if (session.alasan === 'booked') {
-                              statusMessage = 'Sudah dipesan';
-                          }
+                        if (session.alasan === 'expired') {
+                          statusMessage = 'Waktu telah lewat';
+                        } else if (session.alasan === 'booked') {
+                          statusMessage = 'Sudah dipesan';
+                        }
                       }
 
                       // Format harga
                       const formatPrice = (price) => {
-                          return new Intl.NumberFormat('id-ID', {
-                              style: 'currency',
-                              currency: 'IDR',
-                              minimumFractionDigits: 0,
-                              maximumFractionDigits: 0
-                          }).format(price);
+                        return new Intl.NumberFormat('id-ID', {
+                          style: 'currency',
+                          currency: 'IDR',
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0
+                        }).format(price);
                       };
-                      
+
                       return (
                         <Button
                           key={session.id}
@@ -1060,66 +1060,66 @@ export default function BookingPage() {
                             flexDirection: 'column',
                             alignItems: 'center',
                             gap: '4px',
-                            borderColor: !session.tersedia 
-                                ? 'grey.300' 
-                                : isSelected 
-                                    ? 'primary.main' 
-                                    : 'primary.main',
-                            color: !session.tersedia 
-                                ? 'grey.500' 
-                                : isSelected 
-                                    ? 'white' 
-                                    : 'primary.main',
-                            backgroundColor: !session.tersedia 
-                                ? 'grey.100' 
-                                : isSelected 
-                                    ? 'primary.main' 
-                                    : 'transparent',
+                            borderColor: !session.tersedia
+                              ? 'grey.300'
+                              : isSelected
+                                ? 'primary.main'
+                                : 'primary.main',
+                            color: !session.tersedia
+                              ? 'grey.500'
+                              : isSelected
+                                ? 'white'
+                                : 'primary.main',
+                            backgroundColor: !session.tersedia
+                              ? 'grey.100'
+                              : isSelected
+                                ? 'primary.main'
+                                : 'transparent',
                             '&:hover': {
-                                backgroundColor: !session.tersedia 
-                                    ? 'grey.200' 
-                                    : isSelected 
-                                        ? 'primary.dark' 
-                                        : 'primary.light',
-                                color: !session.tersedia 
-                                    ? 'grey.600' 
-                                    : 'white',
-                                borderColor: !session.tersedia 
-                                    ? 'grey.300' 
-                                    : isSelected 
-                                        ? 'primary.dark' 
-                                        : 'primary.light',
+                              backgroundColor: !session.tersedia
+                                ? 'grey.200'
+                                : isSelected
+                                  ? 'primary.dark'
+                                  : 'primary.light',
+                              color: !session.tersedia
+                                ? 'grey.600'
+                                : 'white',
+                              borderColor: !session.tersedia
+                                ? 'grey.300'
+                                : isSelected
+                                  ? 'primary.dark'
+                                  : 'primary.light',
                             },
                             position: 'relative',
                             '&::after': !session.tersedia ? {
-                                content: `"${statusMessage}"`,
-                                position: 'absolute',
-                                bottom: '2px',
-                                right: '3px',
-                                fontSize: '8px',
-                                color: 'error.main',
-                                fontWeight: 'bold'
+                              content: `"${statusMessage}"`,
+                              position: 'absolute',
+                              bottom: '2px',
+                              right: '3px',
+                              fontSize: '8px',
+                              color: 'error.main',
+                              fontWeight: 'bold'
                             } : {}
                           }}
                         >
                           <Typography variant="subtitle1" component="span" sx={{ fontWeight: 'medium' }}>
-                              {session.formatted_start} - {session.formatted_end}
+                            {session.formatted_start} - {session.formatted_end}
                           </Typography>
-                          <Box sx={{ 
-                              display: 'flex', 
-                              flexDirection: 'column', 
-                              alignItems: 'center',
-                              fontSize: '0.75rem',
-                              color: isSelected ? 'inherit' : 'text.secondary'
+                          <Box sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            fontSize: '0.75rem',
+                            color: isSelected ? 'inherit' : 'text.secondary'
                           }}>
-                              <Typography variant="caption">
-                                  Harga: {formatPrice(session.harga_dasar)}
+                            <Typography variant="caption">
+                              Harga: {formatPrice(session.harga_dasar)}
+                            </Typography>
+                            {session.biaya_tambahan > 0 && (
+                              <Typography variant="caption" sx={{ color: isSelected ? 'inherit' : 'warning.main' }}>
+                                +{formatPrice(session.biaya_tambahan)}
                               </Typography>
-                              {session.biaya_tambahan > 0 && (
-                                  <Typography variant="caption" sx={{ color: isSelected ? 'inherit' : 'warning.main' }}>
-                                      +{formatPrice(session.biaya_tambahan)}
-                                  </Typography>
-                              )}
+                            )}
                           </Box>
                         </Button>
                       );
@@ -1151,7 +1151,7 @@ export default function BookingPage() {
         }}
       >
         <DialogTitle sx={{ pb: 1 }}>
-          <Typography variant="h6" fontWeight="bold">
+          <Typography variant="h6" fontWeight="bold" component="span">
             Booking Lapangan
           </Typography>
           {selectedField && (
@@ -1160,14 +1160,15 @@ export default function BookingPage() {
             </Typography>
           )}
         </DialogTitle>
+
         <DialogContent>
           {selectedField && selectedTimeSlots.length > 0 && (
             <Box sx={{ mb: 3 }}>
               <Card sx={{ mb: 3, overflow: 'hidden' }}>
-                <Box sx={{ 
-                    p: 2, 
-                    background: 'linear-gradient(135deg, #7367f0 0%, #9e95f5 100%)',
-                    color: 'white'
+                <Box sx={{
+                  p: 2,
+                  background: 'linear-gradient(135deg, #7367f0 0%, #9e95f5 100%)',
+                  color: 'white'
                 }}>
                   <Typography variant="subtitle1" fontWeight="bold">
                     Detail Booking
@@ -1213,8 +1214,8 @@ export default function BookingPage() {
                       </Typography>
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
                         {selectedTimeSlots.map((slot, index) => (
-                          <Chip 
-                            key={index} 
+                          <Chip
+                            key={index}
                             label={`${slot.formatted_start} - ${slot.formatted_end}`}
                             color="primary"
                             size="small"

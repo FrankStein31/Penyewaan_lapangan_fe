@@ -10,15 +10,15 @@
  */
 export function formatDate(date, options = {}) {
   if (!date) return '-';
-  
-  const defaultOptions = { 
-    day: 'numeric', 
-    month: 'long', 
+
+  const defaultOptions = {
+    day: 'numeric',
+    month: 'long',
     year: 'numeric'
   };
-  
+
   const mergedOptions = { ...defaultOptions, ...options };
-  
+
   try {
     return new Date(date).toLocaleDateString('id-ID', mergedOptions);
   } catch (error) {
@@ -35,21 +35,39 @@ export function formatDate(date, options = {}) {
  */
 export function formatCurrency(amount, options = {}) {
   if (amount === null || amount === undefined) return 'Rp 0';
-  
-  const defaultOptions = { 
-    style: 'currency', 
+
+  const defaultOptions = {
+    style: 'currency',
     currency: 'IDR',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
   };
-  
+
   const mergedOptions = { ...defaultOptions, ...options };
-  
+
   try {
     return new Intl.NumberFormat('id-ID', mergedOptions).format(amount);
   } catch (error) {
     console.error('Error formatting currency:', error);
     return `Rp ${amount}`;
   }
-  
-} 
+}
+
+/**
+ * Format tanggal dan waktu ke format lokal Indonesia
+ * @param {string|Date} dateStr - Tanggal yang akan diformat
+ * @returns {string} - Tanggal dan waktu yang sudah diformat
+ */
+export function formatDateTime(dateStr) {
+  if (!dateStr) return '-';
+
+  try {
+    return new Date(dateStr).toLocaleString('id-ID', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  } catch (error) {
+    console.error('Error formatting dateTime:', error);
+    return dateStr.toString();
+  }
+}

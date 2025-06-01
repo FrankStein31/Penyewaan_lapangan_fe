@@ -51,6 +51,7 @@ import {
   Close as CloseIcon
 } from '@mui/icons-material'
 
+
 export default function PaymentsPage() {
   const { user } = useAuth()
   const [payments, setPayments] = useState([])
@@ -431,6 +432,27 @@ export default function PaymentsPage() {
     }
   })
 
+  if (loading) {
+    return (
+      <UserLayout title="Manajemen Pembayaran">
+        <SkeletonLoader count={3} />
+      </UserLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <UserLayout title="Manajemen Pembayaran">
+        <Box sx={{ p: 2, textAlign: 'center' }}>
+          <Typography color="error">{error}</Typography>
+          <Button variant="outlined" onClick={fetchPayments} sx={{ mt: 2 }}>
+            Coba Lagi
+          </Button>
+        </Box>
+      </UserLayout>
+    )
+  }
+
   return (
     <UserLayout title="Pembayaran">
       {/* Success Alert */}
@@ -565,17 +587,17 @@ export default function PaymentsPage() {
             />
           ) : (
             <Box>
-              {filteredPayments.map((payment) => (
+              {filteredPayments.map((payment, index) => (
                 <Card
-                  key={payment.id}
+                  key={payment.id ?? `payment-${index}`}  // fallback kalau id-nya null
                   sx={{
                     mb: 2,
                     border: 1,
                     borderColor: canMakePayment(payment) ? 'warning.main' : 'divider',
                     boxShadow: canMakePayment(payment) ? 2 : 'none',
                     '&:hover': {
-                      boxShadow: 2
-                    }
+                      boxShadow: 2,
+                    },
                   }}
                 >
                   <CardContent>
