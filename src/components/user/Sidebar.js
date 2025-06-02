@@ -26,6 +26,7 @@ import NotificationsIcon from '@mui/icons-material/Notifications'
 import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import Image from 'next/image'
 
 const drawerWidth = 280
 
@@ -68,16 +69,20 @@ export default function Sidebar() {
             }}
         >
             <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <Toolbar sx={{ px: [1], py: 3 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
-                        <Typography variant="h5" component="div" sx={{ fontWeight: 700, color: theme => theme.palette.primary.main }}>
-                            SportCenter
-                        </Typography>
+                <Toolbar sx={{ pl: 15, py: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'left', width: '100%' }}>
+                        <Image 
+                            src="/images/SIGMA.svg"
+                            alt="SIGMA Logo"
+                            width={160}
+                            height={40}
+                            style={{ filter: 'invert(50%) sepia(98%) saturate(2000%) hue-rotate(228deg) brightness(70%) contrast(150%)' }}
+                        />
                     </Box>
                 </Toolbar>
                 <Divider />
 
-                <Box sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
+                <Box sx={{ pt: 2, pl: 3, display: 'flex', alignItems: 'center' }}>
                     <Avatar sx={{ bgcolor: theme => theme.palette.primary.main }}>
                         {user?.name?.charAt(0) || 'U'}
                     </Avatar>

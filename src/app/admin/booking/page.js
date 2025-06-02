@@ -323,8 +323,8 @@ export default function BookingAdmin() {
             <Sidebar />
             <div className="flex flex-col flex-1 overflow-hidden">
                 <Topbar />
-                <main className="flex-1 pt-20 overflow-auto">
-                    <div className="px-6 py-4">
+                <main className="flex-1 pt-10 px-6 overflow-auto w-full">
+                    <div className="py-8">
                         <div className="flex items-center justify-between mb-6">
                             <h1 className="text-2xl font-bold text-gray-800">Manajemen Pemesanan</h1>
                             <button
@@ -362,22 +362,22 @@ export default function BookingAdmin() {
                                     <table className="min-w-full divide-y divide-gray-200">
                                         <thead className="bg-gray-50">
                                             <tr>
-                                                <th scope="col" className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                                                <th scope="col" className="w-24 px-8 py-4 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                                                     ID
                                                 </th>
-                                                <th scope="col" className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                                                <th scope="col" className="w-48 px-8 py-4 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                                                     Nama
                                                 </th>
-                                                <th scope="col" className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                                                <th scope="col" className="w-40 px-8 py-4 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                                                     Tanggal
                                                 </th>
-                                                <th scope="col" className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                                                <th scope="col" className="w-48 px-8 py-4 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                                                     Waktu
                                                 </th>
-                                                <th scope="col" className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                                                <th scope="col" className="w-40 px-8 py-4 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                                                     Status
                                                 </th>
-                                                <th scope="col" className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                                                <th scope="col" className="w-32 px-8 py-4 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
                                                     Aksi
                                                 </th>
                                             </tr>
@@ -392,24 +392,24 @@ export default function BookingAdmin() {
                                                     const jamSelesai = sesi.length > 0 ? sesi[sesi.length - 1].jam_selesai : "-";
                                                     return (
                                                         <tr key={booking.id_pemesanan} className="hover:bg-gray-50">
-                                                            <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
+                                                            <td className="px-8 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
                                                                 {booking.id_pemesanan}
                                                             </td>
-                                                            <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                                                            <td className="px-8 py-4 text-sm text-gray-500 whitespace-nowrap">
                                                                 {booking.nama_pelanggan}
                                                             </td>
-                                                            <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                                                            <td className="px-8 py-4 text-sm text-gray-500 whitespace-nowrap">
                                                                 {new Date(booking.tanggal).toLocaleDateString('id-ID')}
                                                             </td>
-                                                            <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                                                            <td className="px-8 py-4 text-sm text-gray-500 whitespace-nowrap">
                                                                 {jamMulai} - {jamSelesai}
                                                             </td>
-                                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(booking.status)}`}>
+                                                            <td className="px-8 py-4 whitespace-nowrap">
+                                                                <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(booking.status)}`}>
                                                                     {booking.status}
                                                                 </span>
                                                             </td>
-                                                            <td className="px-6 py-4 text-sm font-medium whitespace-nowrap">
+                                                            <td className="px-8 py-4 text-sm font-medium whitespace-nowrap">
                                                                 <div className="flex space-x-2">
                                                                     <button
                                                                         onClick={() => handleView(booking)}

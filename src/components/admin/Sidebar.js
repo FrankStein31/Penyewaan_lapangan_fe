@@ -32,6 +32,7 @@ import ExpandMore from '@mui/icons-material/ExpandMore'
 import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import Image from 'next/image'
 
 const drawerWidth = 280
 
@@ -79,14 +80,18 @@ export default function Sidebar() {
             <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <Toolbar sx={{ px: [1], py: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
-                        <Typography variant="h5" component="div" sx={{ fontWeight: 700, color: theme => theme.palette.primary.main }}>
-                            SportCenter
-                        </Typography>
+                        <Image 
+                            src="/images/SIGMA.svg"
+                            alt="SIGMA Logo"
+                            width={120}
+                            height={40}
+                            style={{ filter: 'invert(50%) sepia(98%) saturate(2000%) hue-rotate(228deg) brightness(70%) contrast(150%)' }}
+                        />
                     </Box>
                 </Toolbar>
                 <Divider />
 
-                <Box sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
+                <Box sx={{ p: 2, pl: 4, display: 'flex', alignItems: 'center' }}>
                     <Avatar sx={{ bgcolor: theme => theme.palette.primary.main }}>A</Avatar>
                     <Box sx={{ ml: 2 }}>
                         <Typography variant="subtitle1" component="div" sx={{ fontWeight: 600 }}>Admin</Typography>
