@@ -1,118 +1,56 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, RefreshCw, CreditCard, CheckCircle, XCircle, Clock, AlertCircle, Filter, Download, Eye, Calendar } from 'lucide-react'
+import { Search, RefreshCw, CreditCard, CheckCircle, XCircle, Clock, AlertCircle, Download } from 'lucide-react'
 import Sidebar from '@/components/admin/Sidebar'
 import Topbar from '@/components/admin/Topbar'
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-
-// Mock service untuk demo
-const paymentService = {
-    getAll: () => Promise.resolve({
-        data: {
-            data: [
-                {
-                    id: 1,
-                    transaction_id: 'TXN-001-2024',
-                    booking_id: 'BK-001',
-                    payment_type: 'credit_card',
-                    amount: 250000,
-                    status: 'settlement',
-                    created_at: '2024-01-15T10:30:00Z',
-                    bank: 'BCA',
-                    va_number: '1234567890'
-                },
-                {
-                    id: 2,
-                    transaction_id: 'TXN-002-2024',
-                    booking_id: 'BK-002',
-                    payment_type: 'bank_transfer',
-                    amount: 500000,
-                    status: 'pending',
-                    created_at: '2024-01-15T11:30:00Z',
-                    bank: 'Mandiri',
-                    va_number: '0987654321'
-                },
-                {
-                    id: 3,
-                    transaction_id: 'TXN-003-2024',
-                    booking_id: 'BK-003',
-                    payment_type: 'e_wallet',
-                    amount: 150000,
-                    status: 'expire',
-                    created_at: '2024-01-15T09:30:00Z',
-                    bank: 'GoPay',
-                    va_number: null
-                }
-            ]
-        }
-    }),
-    verify: (id) => Promise.resolve({ success: true })
-}
-
-const handleExportToPDF = () => {
-    const input = document.getElementById('export-content');
-    if (!input) return alert("Konten tidak ditemukan");
-
-    html2canvas(input).then((canvas) => {
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const imgProps = pdf.getImageProperties(imgData);
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save('laporan.pdf');
-    });
-};
+import { paymentService } from '@/services/api'
+import { toast } from 'react-hot-toast'
+import jsPDF from 'jspdf'
+import 'jspdf-autotable'
 
 export default function PembayaranAdmin() {
     const [payments, setPayments] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
-    const [refresh, setRefresh] = useState(false)
     const [searchTerm, setSearchTerm] = useState('')
     const [statusFilter, setStatusFilter] = useState('all')
-    const [selectedPayment, setSelectedPayment] = useState(null)
 
-    useEffect(() => {
-        const fetchPayments = async () => {
-            try {
-                setLoading(true)
-                setError(null)
-                const response = await paymentService.getAll()
-                setPayments(response?.data?.data || [])
-            } catch (err) {
-                console.error('Error fetching payments:', err)
-                setError('Gagal memuat data pembayaran')
-            } finally {
-                setLoading(false)
-            }
+    const fetchPayments = async () => {
+        try {
+            setLoading(true)
+            setError(null)
+            const response = await paymentService.getAll()
+            console.log('Response pembayaran:', response)
+            
+            // Pastikan data adalah array
+            const paymentsData = Array.isArray(response?.data) ? response.data : 
+                               Array.isArray(response?.data?.data) ? response.data.data : [];
+            
+            console.log('Data pembayaran yang akan diset:', paymentsData)
+            setPayments(paymentsData)
+        } catch (err) {
+            console.error('Error fetching payments:', err)
+            setError('Gagal memuat data pembayaran')
+            toast.error('Gagal memuat data pembayaran')
+        } finally {
+            setLoading(false)
         }
-
-        fetchPayments()
-    }, [refresh])
-
-    const handleRefresh = () => {
-        setRefresh(!refresh)
     }
 
-    const handleVerifyPayment = async (paymentId) => {
-        try {
-            await paymentService.verify(paymentId)
-            setRefresh(!refresh)
-        } catch (err) {
-            console.error('Error verifying payment:', err)
-            setError('Gagal memverifikasi pembayaran')
-        }
+    useEffect(() => {
+        fetchPayments()
+    }, [])
+
+    const handleRefresh = () => {
+        fetchPayments()
     }
 
     const getStatusBadge = (status) => {
         const configs = {
-            settlement: {
+            diverifikasi: {
                 icon: CheckCircle,
-                text: 'Berhasil',
+                text: 'Diverifikasi',
                 className: 'bg-emerald-50 text-emerald-700 border-emerald-200'
             },
             pending: {
@@ -120,19 +58,9 @@ export default function PembayaranAdmin() {
                 text: 'Pending',
                 className: 'bg-amber-50 text-amber-700 border-amber-200'
             },
-            expire: {
-                icon: XCircle,
-                text: 'Kedaluwarsa',
-                className: 'bg-red-50 text-red-700 border-red-200'
-            },
-            deny: {
+            ditolak: {
                 icon: XCircle,
                 text: 'Ditolak',
-                className: 'bg-red-50 text-red-700 border-red-200'
-            },
-            cancel: {
-                icon: XCircle,
-                text: 'Dibatalkan',
                 className: 'bg-red-50 text-red-700 border-red-200'
             }
         }
@@ -153,35 +81,6 @@ export default function PembayaranAdmin() {
         )
     }
 
-    const getPaymentMethodBadge = (type, bank) => {
-        const configs = {
-            credit_card: { text: 'Kartu Kredit', className: 'bg-blue-50 text-blue-700 border-blue-200' },
-            bank_transfer: { text: 'Transfer Bank', className: 'bg-purple-50 text-purple-700 border-purple-200' },
-            e_wallet: { text: 'E-Wallet', className: 'bg-green-50 text-green-700 border-green-200' }
-        }
-
-        const config = configs[type] || { text: type, className: 'bg-gray-50 text-gray-700 border-gray-200' }
-
-        return (
-            <div className="flex flex-col gap-1">
-                <span className={`inline-flex items-center px-2.5 py-1 text-xs font-medium border rounded-md ${config.className}`}>
-                    {config.text}
-                </span>
-                {bank && (
-                    <span className="text-xs text-gray-500">{bank}</span>
-                )}
-            </div>
-        )
-    }
-
-    const formatCurrency = (amount) => {
-        return new Intl.NumberFormat('id-ID', {
-            style: 'currency',
-            currency: 'IDR',
-            minimumFractionDigits: 0
-        }).format(amount)
-    }
-
     const formatDate = (dateString) => {
         const date = new Date(dateString)
         return {
@@ -197,29 +96,68 @@ export default function PembayaranAdmin() {
         }
     }
 
-    const filteredPayments = payments.filter(payment => {
-        const matchesSearch =
-            payment.transaction_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            payment.booking_id?.toLowerCase().includes(searchTerm.toLowerCase())
-
-        const matchesStatus = statusFilter === 'all' || payment.status === statusFilter
-
-        return matchesSearch && matchesStatus
-    })
-
-    const getStatsSummary = () => {
-        const total = payments.length
-        const settled = payments.filter(p => p.status === 'settlement').length
-        const pending = payments.filter(p => p.status === 'pending').length
-        const failed = payments.filter(p => ['expire', 'deny', 'cancel'].includes(p.status)).length
-        const totalAmount = payments
-            .filter(p => p.status === 'settlement')
-            .reduce((sum, p) => sum + p.amount, 0)
-
-        return { total, settled, pending, failed, totalAmount }
+    const formatCurrency = (amount) => {
+        if (!amount) return 'Rp 0'
+        return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0
+        }).format(amount)
     }
 
-    const stats = getStatsSummary()
+    const filteredPayments = Array.isArray(payments) ? payments.filter(payment => {
+        const matchesSearch = 
+            payment?.id_pemesanan?.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
+            payment?.metode?.toLowerCase().includes(searchTerm.toLowerCase())
+
+        const matchesStatus = statusFilter === 'all' || payment?.status === statusFilter
+
+        return matchesSearch && matchesStatus
+    }) : []
+
+    const handleExportPDF = () => {
+        try {
+            const doc = new jsPDF()
+            
+            // Add title
+            doc.setFontSize(16)
+            doc.text('Laporan Pembayaran', 14, 15)
+            
+            // Add date
+            doc.setFontSize(10)
+            doc.text(`Tanggal: ${new Date().toLocaleDateString('id-ID')}`, 14, 25)
+            
+            // Define the table columns
+            const tableColumn = ["ID", "Pemesanan", "Metode", "Total", "Status", "Tanggal"]
+            
+            // Define the table rows
+            const tableRows = filteredPayments.map(payment => [
+                payment.id_pembayaran,
+                payment.id_pemesanan,
+                payment.metode,
+                formatCurrency(payment.total_bayar),
+                payment.status,
+                new Date(payment.created_at).toLocaleDateString('id-ID')
+            ])
+            
+            // Generate the table
+            doc.autoTable({
+                head: [tableColumn],
+                body: tableRows,
+                startY: 35,
+                styles: { fontSize: 8, cellPadding: 2 },
+                headStyles: { fillColor: [63, 103, 240] },
+                alternateRowStyles: { fillColor: [245, 247, 250] }
+            })
+            
+            // Save the PDF
+            doc.save('laporan-pembayaran.pdf')
+            toast.success('Laporan berhasil diexport')
+        } catch (error) {
+            console.error('Error exporting PDF:', error)
+            toast.error('Gagal mengexport laporan')
+        }
+    }
 
     return (
         <div className="flex min-h-screen bg-gray-50">
@@ -251,11 +189,11 @@ export default function PembayaranAdmin() {
                                         Refresh
                                     </button>
                                     <button
-                                        onClick={handleExportToPDF}
+                                        onClick={handleExportPDF}
                                         className="flex items-center px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     >
                                         <Download className="w-4 h-4 mr-2" />
-                                        Export
+                                        Export PDF
                                     </button>
                                 </div>
                             </div>
@@ -264,8 +202,7 @@ export default function PembayaranAdmin() {
 
                     {/* Content */}
                     <div className="px-6 py-6">
-
-                        {/* Filters and Search */}
+                        {/* Filters */}
                         <div className="p-6 mb-6 bg-white border border-gray-200 rounded-xl">
                             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                                 <div className="flex flex-col gap-4 md:flex-row md:items-center">
@@ -273,28 +210,23 @@ export default function PembayaranAdmin() {
                                         <Search className="absolute w-4 h-4 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
                                         <input
                                             type="text"
-                                            placeholder="Cari ID transaksi atau booking..."
+                                            placeholder="Cari ID pemesanan..."
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
                                             className="pl-10 pr-4 py-2.5 w-full md:w-80 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                         />
                                     </div>
 
-                                    <div className="relative">
-                                        <Filter className="absolute w-4 h-4 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
-                                        <select
-                                            value={statusFilter}
-                                            onChange={(e) => setStatusFilter(e.target.value)}
-                                            className="pl-10 pr-8 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
-                                        >
-                                            <option value="all">Semua Status</option>
-                                            <option value="settlement">Berhasil</option>
-                                            <option value="pending">Pending</option>
-                                            <option value="expire">Kedaluwarsa</option>
-                                            <option value="deny">Ditolak</option>
-                                            <option value="cancel">Dibatalkan</option>
-                                        </select>
-                                    </div>
+                                    <select
+                                        value={statusFilter}
+                                        onChange={(e) => setStatusFilter(e.target.value)}
+                                        className="px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    >
+                                        <option value="all">Semua Status</option>
+                                        <option value="diverifikasi">Diverifikasi</option>
+                                        <option value="pending">Pending</option>
+                                        <option value="ditolak">Ditolak</option>
+                                    </select>
                                 </div>
 
                                 <div className="text-sm text-gray-600">
@@ -323,22 +255,19 @@ export default function PembayaranAdmin() {
                                         <thead className="border-b border-gray-200 bg-gray-50">
                                             <tr>
                                                 <th className="px-6 py-4 text-xs font-semibold tracking-wider text-left text-gray-600 uppercase">
-                                                    Transaksi
+                                                    ID Pemesanan
                                                 </th>
                                                 <th className="px-6 py-4 text-xs font-semibold tracking-wider text-left text-gray-600 uppercase">
-                                                    Metode Pembayaran
+                                                    Metode
                                                 </th>
                                                 <th className="px-6 py-4 text-xs font-semibold tracking-wider text-left text-gray-600 uppercase">
-                                                    Jumlah
+                                                    Total Bayar
                                                 </th>
                                                 <th className="px-6 py-4 text-xs font-semibold tracking-wider text-left text-gray-600 uppercase">
                                                     Status
                                                 </th>
                                                 <th className="px-6 py-4 text-xs font-semibold tracking-wider text-left text-gray-600 uppercase">
                                                     Tanggal
-                                                </th>
-                                                <th className="px-6 py-4 text-xs font-semibold tracking-wider text-left text-gray-600 uppercase">
-                                                    Aksi
                                                 </th>
                                             </tr>
                                         </thead>
@@ -347,28 +276,20 @@ export default function PembayaranAdmin() {
                                                 filteredPayments.map((payment) => {
                                                     const dateTime = formatDate(payment.created_at)
                                                     return (
-                                                        <tr key={payment.id} className="transition-colors hover:bg-gray-50">
+                                                        <tr key={payment.id_pembayaran} className="hover:bg-gray-50">
                                                             <td className="px-6 py-4">
-                                                                <div className="flex flex-col">
-                                                                    <span className="font-semibold text-gray-900">
-                                                                        {payment.transaction_id || '-'}
-                                                                    </span>
-                                                                    <span className="text-sm text-gray-500">
-                                                                        Booking: {payment.booking_id}
-                                                                    </span>
-                                                                    {payment.va_number && (
-                                                                        <span className="text-xs text-gray-400">
-                                                                            VA: {payment.va_number}
-                                                                        </span>
-                                                                    )}
-                                                                </div>
+                                                                <span className="font-medium text-gray-900">
+                                                                    #{payment.id_pemesanan}
+                                                                </span>
                                                             </td>
                                                             <td className="px-6 py-4">
-                                                                {getPaymentMethodBadge(payment.payment_type, payment.bank)}
+                                                                <span className="capitalize text-gray-900">
+                                                                    {payment.metode}
+                                                                </span>
                                                             </td>
                                                             <td className="px-6 py-4">
-                                                                <span className="font-semibold text-gray-900">
-                                                                    {formatCurrency(payment.amount)}
+                                                                <span className="font-medium text-gray-900">
+                                                                    {formatCurrency(payment.total_bayar)}
                                                                 </span>
                                                             </td>
                                                             <td className="px-6 py-4">
@@ -384,32 +305,12 @@ export default function PembayaranAdmin() {
                                                                     </span>
                                                                 </div>
                                                             </td>
-                                                            <td className="px-6 py-4">
-                                                                <div className="flex gap-2">
-                                                                    <button
-                                                                        onClick={() => setSelectedPayment(payment)}
-                                                                        className="flex items-center px-3 py-1.5 text-sm text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
-                                                                    >
-                                                                        <Eye className="w-4 h-4 mr-1" />
-                                                                        Detail
-                                                                    </button>
-                                                                    {payment.status === 'pending' && (
-                                                                        <button
-                                                                            onClick={() => handleVerifyPayment(payment.id)}
-                                                                            className="flex items-center px-3 py-1.5 text-sm text-white bg-emerald-600 rounded-md hover:bg-emerald-700 transition-colors"
-                                                                        >
-                                                                            <CheckCircle className="w-4 h-4 mr-1" />
-                                                                            Verifikasi
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-                                                            </td>
                                                         </tr>
                                                     )
                                                 })
                                             ) : (
                                                 <tr>
-                                                    <td colSpan="6" className="px-6 py-20 text-center">
+                                                    <td colSpan="5" className="px-6 py-20 text-center">
                                                         <div className="flex flex-col items-center">
                                                             {searchTerm || statusFilter !== 'all' ? (
                                                                 <>
@@ -447,83 +348,6 @@ export default function PembayaranAdmin() {
                     </div>
                 </main>
             </div>
-
-            {/* Detail Modal */}
-            {selectedPayment && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-                    <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                        <div className="p-6 border-b border-gray-200">
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-xl font-bold text-gray-900">Detail Pembayaran</h2>
-                                <button
-                                    onClick={() => setSelectedPayment(null)}
-                                    className="p-2 text-gray-400 rounded-lg hover:text-gray-600"
-                                >
-                                    <XCircle className="w-6 h-6" />
-                                </button>
-                            </div>
-                        </div>
-                        <div className="p-6 space-y-6">
-                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                                <div>
-                                    <label className="block mb-1 text-sm font-medium text-gray-700">
-                                        ID Transaksi
-                                    </label>
-                                    <p className="p-2 font-mono text-gray-900 rounded bg-gray-50">
-                                        {selectedPayment.transaction_id}
-                                    </p>
-                                </div>
-                                <div>
-                                    <label className="block mb-1 text-sm font-medium text-gray-700">
-                                        Booking ID
-                                    </label>
-                                    <p className="p-2 font-mono text-gray-900 rounded bg-gray-50">
-                                        {selectedPayment.booking_id}
-                                    </p>
-                                </div>
-                                <div>
-                                    <label className="block mb-1 text-sm font-medium text-gray-700">
-                                        Jumlah Pembayaran
-                                    </label>
-                                    <p className="text-lg font-bold text-gray-900">
-                                        {formatCurrency(selectedPayment.amount)}
-                                    </p>
-                                </div>
-                                <div>
-                                    <label className="block mb-1 text-sm font-medium text-gray-700">
-                                        Status
-                                    </label>
-                                    {getStatusBadge(selectedPayment.status)}
-                                </div>
-                                <div>
-                                    <label className="block mb-1 text-sm font-medium text-gray-700">
-                                        Metode Pembayaran
-                                    </label>
-                                    {getPaymentMethodBadge(selectedPayment.payment_type, selectedPayment.bank)}
-                                </div>
-                                <div>
-                                    <label className="block mb-1 text-sm font-medium text-gray-700">
-                                        Tanggal Transaksi
-                                    </label>
-                                    <p className="text-gray-900">
-                                        {new Date(selectedPayment.created_at).toLocaleString('id-ID')}
-                                    </p>
-                                </div>
-                                {selectedPayment.va_number && (
-                                    <div className="md:col-span-2">
-                                        <label className="block mb-1 text-sm font-medium text-gray-700">
-                                            Virtual Account
-                                        </label>
-                                        <p className="p-2 font-mono text-gray-900 rounded bg-gray-50">
-                                            {selectedPayment.va_number}
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     )
 }

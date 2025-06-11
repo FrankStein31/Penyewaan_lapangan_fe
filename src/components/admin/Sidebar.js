@@ -45,7 +45,7 @@ const menuItems = [
     { text: 'Pembayaran', icon: <PaymentIcon />, path: '/admin/pembayaran' },
     { text: 'Jadwal & Sesi', icon: <AccessTimeIcon />, path: '/admin/jadwal' },
     { text: 'Fasilitas', icon: <MeetingRoomIcon />, path: '/admin/fasilitas' },
-    { text: 'Status Lapangan', icon: <EventAvailableIcon />, path: '/admin/status_lapangan' },
+    // { text: 'Status Lapangan', icon: <EventAvailableIcon />, path: '/admin/status_lapangan' },
 ]
 
 export default function Sidebar() {

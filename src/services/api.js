@@ -514,32 +514,38 @@ export const bookingService = {
 
 // Payment (Pembayaran) services
 export const paymentService = {
-    // Mendapatkan semua pembayaran
     getAll: async () => {
-        return axiosInstance.get('/pembayaran');
+        try {
+            const response = await axiosInstance.get('/pembayaran');
+            console.log('Response pembayaran:', response);
+            return response;
+        } catch (error) {
+            console.error('Error fetching payments:', error);
+            throw error;
+        }
     },
-
-    // Mendapatkan pembayaran berdasarkan id
+    verify: async (id) => {
+        try {
+            const response = await axiosInstance.put(`/pembayaran/${id}/verify`);
+            console.log('Response verify pembayaran:', response);
+            return response;
+        } catch (error) {
+            console.error('Error verifying payment:', error);
+            throw error;
+        }
+    },
     getById: async (id) => {
         return axiosInstance.get(`/pembayaran/${id}`);
     },
-
-    // Membuat pembayaran baru
     create: async (paymentData) => {
         return axiosInstance.post('/pembayaran', paymentData);
     },
-
-    // Update pembayaran
     update: async (id, paymentData) => {
         return axiosInstance.put(`/pembayaran/${id}`, paymentData);
     },
-
-    // Hapus pembayaran
     delete: async (id) => {
         return axiosInstance.delete(`/pembayaran/${id}`);
     },
-
-    // Midtrans payment
     createMidtransTransaction: async (paymentData) => {
         try {
             // Log data untuk debugging
@@ -574,8 +580,6 @@ export const paymentService = {
             throw error;
         }
     },
-
-    // Check payment status
     checkStatus: async (bookingId) => {
         try {
             const response = await axiosInstance.get(`/pemesanan/${bookingId}/payment/status`);

@@ -33,10 +33,10 @@ const drawerWidth = 280
 const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
     { text: 'Booking Lapangan', icon: <CalendarMonthIcon />, path: '/booking' },
+    // { text: 'Notifikasi', icon: <NotificationsIcon />, path: '/notifications' },
     { text: 'Histori Booking', icon: <HistoryIcon />, path: '/history' },
-    { text: 'Notifikasi', icon: <NotificationsIcon />, path: '/notifications' },
     { text: 'Pembayaran', icon: <ReceiptIcon />, path: '/payments' },
-    { text: 'Profil', icon: <AccountCircleIcon />, path: '/profile' },
+    // { text: 'Profil', icon: <AccountCircleIcon />, path: '/profile' },
 ]
 
 export default function Sidebar() {
