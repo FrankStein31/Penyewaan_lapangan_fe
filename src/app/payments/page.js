@@ -106,6 +106,8 @@ export default function PaymentsPage() {
 
   // Fungsi untuk mengkonversi booking ke payment format
   const convertBookingToPayment = useCallback((booking) => {
+    console.log('Converting booking:', booking);
+    
     // Hitung status pembayaran berdasarkan status booking
     let paymentStatus = 'pending'
     let transactionStatus = 'pending'
@@ -127,16 +129,19 @@ export default function PaymentsPage() {
     const waktuMulai = sesi.length > 0 ? sesi[0].jam_mulai : "-"
     const waktuSelesai = sesi.length > 0 ? sesi[sesi.length - 1].jam_selesai : "-"
 
-    return {
+    // Ambil data pembayaran jika ada
+    const pembayaran = booking.pembayaran && booking.pembayaran.length > 0 ? booking.pembayaran[0] : null
+
+    const converted = {
       id: booking.id_pemesanan,
       booking_id: booking.id_pemesanan,
-      amount: booking.total_harga,
-      status: paymentStatus,
-      transaction_status: transactionStatus,
+      amount: parseFloat(booking.total_harga),
+      status: pembayaran ? pembayaran.status : paymentStatus,
+      transaction_status: pembayaran ? pembayaran.transaction_status : transactionStatus,
       booking_status: booking.status,
-      payment_type: booking.payment_type || 'midtrans',
-      snap_token: booking.snap_token || null,
-      transaction_id: booking.transaction_id || null,
+      payment_type: pembayaran ? pembayaran.payment_type : 'midtrans',
+      snap_token: pembayaran ? pembayaran.snap_token : null,
+      transaction_id: pembayaran ? pembayaran.transaction_id : null,
       date: booking.created_at,
       due_date: booking.due_date || null,
       field_name: booking.lapangan?.nama || 'Lapangan',
@@ -149,8 +154,11 @@ export default function PaymentsPage() {
       customer_phone: booking.no_hp,
       notes: booking.catatan || null,
       sessions: sesi,
-      paid_at: booking.paid_at || null
-    }
+      paid_at: pembayaran ? pembayaran.paid_at : null
+    };
+
+    console.log('Converted payment object:', converted);
+    return converted;
   }, [])
 
   // Fungsi untuk mengambil data pembayaran dari booking
@@ -162,7 +170,7 @@ export default function PaymentsPage() {
       setError(null)
 
       // Ambil data booking untuk user yang sedang login
-      const response = await bookingService.getAll()
+      const response = await bookingService.getUserBookings()
       console.log('Bookings response:', response)
 
       let bookingsData = []
@@ -174,17 +182,19 @@ export default function PaymentsPage() {
         }
       }
 
-      // Filter booking berdasarkan user yang sedang login
-      const userBookings = bookingsData.filter(booking =>
-        booking.email === user?.email || booking.user_id === user?.id
-      )
+      console.log('User bookings before conversion:', bookingsData);
 
       // Konversi booking ke format payment
-      const formattedPayments = userBookings.map(convertBookingToPayment)
+      const formattedPayments = bookingsData.map(booking => {
+        const converted = convertBookingToPayment(booking);
+        console.log('Converted booking:', converted);
+        return converted;
+      });
 
       // Urutkan berdasarkan tanggal terbaru
       formattedPayments.sort((a, b) => new Date(b.date) - new Date(a.date))
 
+      console.log('Final formatted payments:', formattedPayments);
       setPayments(formattedPayments)
     } catch (err) {
       console.error('Error fetching payments:', err)
@@ -251,9 +261,12 @@ export default function PaymentsPage() {
     }
   }
 
-  // Handler untuk memproses pembayaran dengan Midtrans (Embedded)
+  // Handler untuk memproses pembayaran dengan Midtrans (Popup)
   const handleProcessPayment = async () => {
-    if (!paymentDialog.payment) return
+    if (!paymentDialog.payment) {
+      console.error('No payment data available');
+      return;
+    }
 
     try {
       setPaymentDialog(prev => ({
@@ -262,35 +275,37 @@ export default function PaymentsPage() {
         error: null
       }))
 
-      // Jika sudah ada snap_token, gunakan yang ada
-      let snapToken = paymentDialog.payment.snap_token
+      // Log data pembayaran untuk debugging
+      console.log('Payment Dialog Data:', paymentDialog.payment);
 
-      // Jika belum ada snap_token, request ke backend untuk membuat transaksi baru
-      if (!snapToken) {
-        const paymentData = {
-          booking_id: paymentDialog.payment.booking_id,
-          amount: paymentDialog.payment.amount,
-          customer_details: {
-            first_name: paymentDialog.payment.customer_name,
-            email: paymentDialog.payment.customer_email,
-            phone: paymentDialog.payment.customer_phone
-          },
-          item_details: {
-            name: `Booking ${paymentDialog.payment.field_name}`,
-            price: paymentDialog.payment.amount,
-            quantity: 1,
-            category: 'Sports Booking'
-          }
+      // Validasi data pembayaran
+      if (!paymentDialog.payment.id_pemesanan && !paymentDialog.payment.booking_id) {
+        throw new Error('ID Pemesanan tidak ditemukan');
+      }
+
+      if (!paymentDialog.payment.total_harga && !paymentDialog.payment.amount) {
+        throw new Error('Total pembayaran tidak valid');
+      }
+
+      // Siapkan data pembayaran
+      const paymentData = {
+        booking_id: paymentDialog.payment.id_pemesanan || paymentDialog.payment.booking_id,
+        amount: parseInt(paymentDialog.payment.total_harga || paymentDialog.payment.amount || 0),
+        customer_details: {
+          first_name: paymentDialog.payment.customer_name || user?.name || 'Customer',
+          email: paymentDialog.payment.customer_email || user?.email || 'customer@example.com',
+          phone: paymentDialog.payment.customer_phone || user?.phone || '08123456789'
         }
+      }
 
-        // Call API untuk membuat transaksi Midtrans
-        const response = await paymentService.createMidtransTransaction(paymentData)
-        snapToken = response.data.snap_token
+      console.log('Sending payment data:', paymentData);
 
-        // Update payment dengan snap_token baru
-        setPayments(prev => prev.map(p =>
-          p.id === paymentDialog.payment.id ? { ...p, snap_token: snapToken } : p
-        ))
+      // Call API untuk membuat transaksi Midtrans
+      const response = await paymentService.createMidtransTransaction(paymentData)
+      console.log('Response from backend:', response);
+
+      if (!response?.data?.data?.snap_token) {
+        throw new Error('Tidak mendapatkan snap token dari server');
       }
 
       // Pastikan snap sudah terload
@@ -298,21 +313,39 @@ export default function PaymentsPage() {
         throw new Error('Payment gateway is not ready. Please refresh the page.')
       }
 
-      // Set processing selesai dan embed snap
+      // Set processing selesai
       setPaymentDialog(prev => ({
         ...prev,
-        processing: false,
-        snapEmbedded: true
+        processing: false
       }))
 
-      // Embed Snap dengan callback
-      window.snap.embed(snapToken, {
-        embedId: 'snap-container',
-        onSuccess: function (result) {
-          console.log('Payment success:', result)
-          setSuccess('Pembayaran berhasil! Status booking akan diperbarui dalam beberapa saat.')
-          handleClosePaymentDialog()
-          fetchPayments()
+      // Buka Snap popup
+      window.snap.pay(response.data.data.snap_token, {
+        onSuccess: async function (result) {
+          console.log('Payment success:', result);
+          try {
+            // Update status pembayaran dan booking
+            const updateResponse = await bookingService.updatePaymentStatus(paymentDialog.payment.booking_id, {
+              status: 'diverifikasi',
+              payment_status: 'diverifikasi',
+              transaction_status: result.transaction_status,
+              transaction_id: result.transaction_id,
+              payment_type: result.payment_type,
+              paid_at: new Date().toISOString()
+            });
+
+            if (updateResponse.success) {
+              setSuccess('Pembayaran berhasil! Status booking telah diperbarui.');
+            } else {
+              throw new Error('Gagal mengupdate status');
+            }
+          } catch (err) {
+            console.error('Error updating payment status:', err);
+            setError('Pembayaran berhasil tetapi gagal memperbarui status. Silakan hubungi admin.');
+          } finally {
+            handleClosePaymentDialog();
+            fetchPayments(); // Refresh data
+          }
         },
         onPending: function (result) {
           console.log('Payment pending:', result)
@@ -321,7 +354,7 @@ export default function PaymentsPage() {
           fetchPayments()
         },
         onError: function (result) {
-          console.log('Payment error:', result)
+          console.error('Payment error:', result)
           setError('Terjadi kesalahan saat memproses pembayaran. Silakan coba lagi.')
           handleClosePaymentDialog()
         },

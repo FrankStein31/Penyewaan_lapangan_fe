@@ -450,121 +450,63 @@ export const statusService = {
 
 // Booking (Pemesanan) services
 export const bookingService = {
-    // Mendapatkan semua pemesanan
+    // Get all bookings
     getAll: async () => {
-        try {
-            const response = await axiosInstance.get('/pemesanan');
-            return response;
-        } catch (error) {
-            console.error('Error in getAll bookings:', error);
-            throw error;
-        }
+        const response = await axiosInstance.get('/pemesanan');
+        return response.data;
     },
 
-    // Mendapatkan pemesanan berdasarkan id
-    getById: async (id) => {
-        try {
-            const response = await axiosInstance.get(`/pemesanan/${id}`);
-            return response;
-        } catch (error) {
-            console.error('Error in getById booking:', error);
-            throw error;
-        }
-    },
-
-    // Mendapatkan pemesanan user yang login
+    // Get user's bookings
     getUserBookings: async () => {
-        try {
-            const response = await axiosInstance.get('/pemesanan/user');
-            return response;
-        } catch (error) {
-            console.error('Error in getUserBookings:', error);
-            throw error;
-        }
+        const response = await axiosInstance.get('/pemesanan/user');
+        return response.data;
     },
 
-    // Cek ketersediaan lapangan untuk tanggal tertentu
-    checkAvailability: async (id_lapangan, tanggal) => {
-        // Pastikan kedua parameter ada dan valid
-        if (!id_lapangan || !tanggal) {
-            console.error('checkAvailability: Parameter tidak lengkap', { id_lapangan, tanggal });
-            throw new Error('ID lapangan dan tanggal harus diisi');
-        }
-
-        // Convert id_lapangan ke string jika itu adalah angka
-        const fieldId = typeof id_lapangan === 'number' ? id_lapangan.toString() : id_lapangan;
-
-        console.log('Sending availability check request with params:', { id_lapangan: fieldId, tanggal });
-
-        return axiosInstance.get('/pemesanan/check-availability', {
-            params: {
-                id_lapangan: fieldId,
-                tanggal
-            }
-        });
+    // Get booking by ID
+    getById: async (id) => {
+        const response = await axiosInstance.get(`/pemesanan/${id}`);
+        return response.data;
     },
 
-    // Membuat pemesanan baru
+    // Create new booking
     create: async (bookingData) => {
-        console.log('Mengirim data pemesanan ke API:', bookingData);
-
-        // Memastikan semua parameter wajib tersedia
-        const { id_lapangan, tanggal, id_sesi } = bookingData;
-        if (!id_lapangan || !tanggal || !id_sesi) {
-            throw new Error('Data pemesanan tidak lengkap. id_lapangan, tanggal, dan id_sesi wajib diisi.');
-        }
-
-        // Pastikan id_sesi adalah array
-        if (!Array.isArray(id_sesi)) {
-            bookingData.id_sesi = [id_sesi]; // Konversi ke array jika bukan array
-            console.log('id_sesi dikonversi ke array:', bookingData.id_sesi);
-        }
-
-        // Kirim semua data yang tersedia ke API
-        return axiosInstance.post('/pemesanan', bookingData);
+        const response = await axiosInstance.post('/pemesanan', bookingData);
+        return response.data;
     },
 
-    // Update pemesanan (misal: update status)
+    // Update booking
     update: async (id, bookingData) => {
-        try {
-            const response = await axiosInstance.put(`/pemesanan/${id}`, bookingData);
-            return response;
-        } catch (error) {
-            console.error('Error in update booking:', error);
-            throw error;
-        }
+        const response = await axiosInstance.put(`/pemesanan/${id}`, bookingData);
+        return response.data;
     },
 
-    // Hapus pemesanan
+    // Delete booking
     delete: async (id) => {
-        try {
-            const response = await axiosInstance.delete(`/pemesanan/${id}`);
-            return response;
-        } catch (error) {
-            console.error('Error in delete booking:', error);
-            throw error;
-        }
+        const response = await axiosInstance.delete(`/pemesanan/${id}`);
+        return response.data;
     },
 
+    // Get payment token
     getPaymentToken: async (bookingId) => {
         const response = await axiosInstance.post(`/pemesanan/${bookingId}/payment`);
         return response.data;
     },
 
+    // Check payment status
     checkPaymentStatus: async (bookingId) => {
         const response = await axiosInstance.get(`/pemesanan/${bookingId}/payment/status`);
         return response.data;
     },
 
-    // Verifikasi pemesanan
-    verify: async (id, isApproved) => {
+    // Update payment status
+    updatePaymentStatus: async (bookingId, paymentData) => {
         try {
-            const response = await axiosInstance.put(`/pemesanan/${id}/verify`, {
-                status: isApproved ? 'diverifikasi' : 'ditolak'
-            });
-            return response;
+            console.log('Updating payment status:', { bookingId, paymentData });
+            const response = await axiosInstance.post(`/pemesanan/${bookingId}/payment/update`, paymentData);
+            console.log('Update payment status response:', response.data);
+            return response.data;
         } catch (error) {
-            console.error('Error in verify booking:', error);
+            console.error('Error updating payment status:', error);
             throw error;
         }
     }
@@ -597,20 +539,41 @@ export const paymentService = {
         return axiosInstance.delete(`/pembayaran/${id}`);
     },
 
-    // Midtrans payment`
-    createMidtransTransaction: async (bookingId, paymentData) => {
+    // Midtrans payment
+    createMidtransTransaction: async (paymentData) => {
         try {
-            const response = await axiosInstance.post(`payments/midtrans`, {
-                bookingId,
-                ...paymentData,
-            });
-            return response.data;
+            // Log data untuk debugging
+            console.log('Creating Midtrans transaction with data:', paymentData);
+
+            // Pastikan data yang dikirim sesuai format
+            const requestData = {
+                booking_id: paymentData.booking_id,
+                amount: parseInt(paymentData.amount),
+                customer_details: {
+                    first_name: paymentData.customer_details.first_name || 'Customer',
+                    email: paymentData.customer_details.email || 'customer@example.com',
+                    phone: paymentData.customer_details.phone || '08123456789'
+                }
+            };
+
+            // Pastikan amount valid
+            if (!requestData.amount || requestData.amount <= 0) {
+                throw new Error('Jumlah pembayaran tidak valid');
+            }
+
+            // Pastikan booking_id ada
+            if (!requestData.booking_id) {
+                throw new Error('ID Booking tidak valid');
+            }
+
+            const response = await axiosInstance.post('/pembayaran/create-transaction', requestData);
+            console.log('Midtrans response:', response);
+            return response;
         } catch (error) {
             console.error('Error creating payment:', error);
             throw error;
         }
     },
-
 
     // Check payment status
     checkStatus: async (bookingId) => {
@@ -621,6 +584,29 @@ export const paymentService = {
             console.error('Error checking payment status:', error);
             throw error;
         }
+    }
+};
+
+// Sesi service
+export const sesiService = {
+    // Get all sesi
+    getAll: async () => {
+        const response = await axiosInstance.get('/sesi');
+        return response.data;
+    },
+
+    // Get sesi by ID
+    getById: async (id) => {
+        const response = await axiosInstance.get(`/sesi/${id}`);
+        return response.data;
+    },
+
+    // Get multiple sesi by IDs
+    getByIds: async (ids) => {
+        const response = await axiosInstance.get('/sesi/multiple', {
+            params: { ids: ids.join(',') }
+        });
+        return response.data;
     }
 };
 

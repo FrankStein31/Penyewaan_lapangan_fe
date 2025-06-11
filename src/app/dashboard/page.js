@@ -48,8 +48,8 @@ export default function DashboardPage() {
                 const bookingsResponse = await bookingService.getUserBookings();
                 console.log('Response dari getUserBookings:', bookingsResponse);
                 
-                if (bookingsResponse && bookingsResponse.data && bookingsResponse.data.data) {
-                    const bookingsData = bookingsResponse.data.data;
+                if (bookingsResponse && bookingsResponse.data) {
+                    const bookingsData = bookingsResponse.data;
                     console.log('Data booking berhasil didapatkan:', bookingsData);
                     setBookings(bookingsData);
                     
@@ -57,11 +57,14 @@ export default function DashboardPage() {
                     const total = bookingsData.reduce((sum, booking) => sum + (parseFloat(booking.total_harga) || 0), 0);
                     setTotalPayment(total);
                     
-                    // Hitung total jam
+                    // Hitung total jam berdasarkan id_sesi (JSON)
                     const hours = bookingsData.reduce((sum, booking) => {
-                        // Gunakan durasi dari booking atau hitung dari jumlah sesi
-                        const durasi = booking.durasi || (booking.id_sesi ? booking.id_sesi.length : 0);
-                        return sum + durasi;
+                        if (booking.id_sesi) {
+                            const sesiIds = typeof booking.id_sesi === 'string' ? 
+                                JSON.parse(booking.id_sesi) : booking.id_sesi;
+                            return sum + (Array.isArray(sesiIds) ? sesiIds.length : 0);
+                        }
+                        return sum;
                     }, 0);
                     setTotalHours(hours);
                     
@@ -149,15 +152,15 @@ export default function DashboardPage() {
 
     const getStatusChip = (status) => {
         const statusMap = {
-            'pending': { label: 'Menunggu', color: 'warning' },
-            'confirmed': { label: 'Dikonfirmasi', color: 'info' },
-            'completed': { label: 'Selesai', color: 'success' },
-            'cancelled': { label: 'Dibatalkan', color: 'error' },
-            'paid': { label: 'Dibayar', color: 'primary' },
-            'unpaid': { label: 'Belum Dibayar', color: 'error' },
+            'menunggu verifikasi': { label: 'Menunggu', color: 'warning' },
+            'diverifikasi': { label: 'Dikonfirmasi', color: 'info' },
+            'selesai': { label: 'Selesai', color: 'success' },
+            'dibatalkan': { label: 'Dibatalkan', color: 'error' },
+            'ditolak': { label: 'Ditolak', color: 'error' }
         };
         
-        const statusConfig = statusMap[status.toLowerCase()] || { label: status, color: 'default' };
+        const statusKey = status?.toLowerCase() || 'menunggu verifikasi';
+        const statusConfig = statusMap[statusKey] || { label: status || 'Menunggu', color: 'default' };
         
         return (
             <Chip 
@@ -181,6 +184,27 @@ export default function DashboardPage() {
             minimumFractionDigits: 0,
             maximumFractionDigits: 0
         }).format(value);
+    };
+
+    // Format waktu sesi
+    const formatSessionTime = (booking) => {
+        try {
+            if (!booking || !booking.id_sesi) {
+                return 'Waktu tidak tersedia';
+            }
+
+            const sesiIds = typeof booking.id_sesi === 'string' ? 
+                JSON.parse(booking.id_sesi) : booking.id_sesi;
+
+            if (!Array.isArray(sesiIds) || sesiIds.length === 0) {
+                return 'Waktu tidak tersedia';
+            }
+
+            return `${booking.jam_mulai} - ${booking.jam_selesai}`;
+        } catch (error) {
+            console.error('Error formatting session time:', error);
+            return 'Waktu tidak tersedia';
+        }
     };
 
     const statsItems = [
@@ -310,11 +334,11 @@ export default function DashboardPage() {
                             ) : (
                                 <List sx={{ width: '100%' }}>
                                     {bookings.map((booking, index) => (
-                                        <div key={booking.id}>
+                                        <div key={booking.id_pemesanan}>
                                             <ListItem 
                                                 alignItems="flex-start" 
                                                 sx={{ px: 0 }}
-                                                secondaryAction={getStatusChip(booking.status || 'pending')}
+                                                secondaryAction={getStatusChip(booking.status)}
                                             >
                                                 <ListItemAvatar>
                                                     <Avatar sx={{ bgcolor: 'primary.main' }}>
@@ -324,7 +348,7 @@ export default function DashboardPage() {
                                                 <ListItemText
                                                     primary={
                                                         <Typography variant="subtitle1" fontWeight="medium">
-                                                            {booking.lapangan?.nama_lapangan || 'Lapangan'}
+                                                            {booking.lapangan?.nama || 'Lapangan'}
                                                         </Typography>
                                                     }
                                                     secondary={
@@ -333,7 +357,10 @@ export default function DashboardPage() {
                                                                 {formatDate(booking.tanggal)}
                                                             </Typography>
                                                             <Typography component="span" variant="body2" color="text.secondary" sx={{ display: 'block' }}>
-                                                                {booking.sesi?.jam_mulai} - {booking.sesi?.jam_selesai}
+                                                                {formatSessionTime(booking)}
+                                                            </Typography>
+                                                            <Typography component="span" variant="body2" color="text.secondary" sx={{ display: 'block' }}>
+                                                                Total: {formatCurrency(booking.total_harga)}
                                                             </Typography>
                                                         </Box>
                                                     }

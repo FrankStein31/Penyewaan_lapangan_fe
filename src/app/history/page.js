@@ -2,9 +2,9 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import UserLayout from '@/components/user/UserLayout';
-import { bookingService } from '@/services/api';
+import { bookingService, sesiService } from '@/services/api';
 import { 
     Box, 
     Typography, 
@@ -32,13 +32,38 @@ import {
 
 export default function HistoryPage() {
     const [bookings, setBookings] = useState([]);
+    const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [success, setSuccess] = useState(null);
     const [tabValue, setTabValue] = useState(0);
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+    const [paymentDialog, setPaymentDialog] = useState({
+        open: false,
+        payment: null,
+        processing: false,
+        error: null,
+        snapEmbedded: false
+    });
+    const [sesiData, setSesiData] = useState({});
 
     useEffect(() => {
+        const fetchSesiData = async (sesiIds) => {
+            try {
+                const response = await sesiService.getByIds(sesiIds);
+                if (response.success && response.data) {
+                    const sesiMap = {};
+                    response.data.forEach(sesi => {
+                        sesiMap[sesi.id_sesi] = sesi;
+                    });
+                    setSesiData(prevData => ({ ...prevData, ...sesiMap }));
+                }
+            } catch (error) {
+                console.error('Error fetching sesi data:', error);
+            }
+        };
+
         const fetchBookings = async () => {
             try {
                 setLoading(true);
@@ -46,9 +71,25 @@ export default function HistoryPage() {
                 const response = await bookingService.getUserBookings();
                 console.log('Response dari server:', response);
                 
-                if (response && response.data && response.data.data) {
-                    console.log('Data booking berhasil diambil:', response.data.data);
-                    setBookings(response.data.data);
+                if (response && response.data) {
+                    console.log('Data booking berhasil diambil:', response.data);
+                    setBookings(response.data);
+
+                    // Kumpulkan semua ID sesi dari semua booking
+                    const allSesiIds = response.data.reduce((ids, booking) => {
+                        if (booking.id_sesi) {
+                            const sesiIds = typeof booking.id_sesi === 'string' 
+                                ? JSON.parse(booking.id_sesi) 
+                                : booking.id_sesi;
+                            return [...ids, ...sesiIds];
+                        }
+                        return ids;
+                    }, []);
+
+                    // Ambil data sesi jika ada ID sesi
+                    if (allSesiIds.length > 0) {
+                        await fetchSesiData(allSesiIds);
+                    }
                 } else {
                     console.log('Data kosong atau format tidak sesuai');
                     setBookings([]);
@@ -56,34 +97,7 @@ export default function HistoryPage() {
                 setError(null);
             } catch (err) {
                 console.error('Error lengkap:', err);
-                
-                if (err.response) {
-                    const statusCode = err.response.status;
-                    console.error('Response status:', statusCode);
-                    console.error('Response headers:', err.response.headers);
-                    console.error('Response data:', err.response.data);
-                    
-                    let errorMsg = `Error server (${statusCode})`;
-                    
-                    if (err.response.data && err.response.data.message) {
-                        errorMsg = err.response.data.message;
-                    }
-                    
-                    if (statusCode === 401) {
-                        errorMsg = 'Anda belum login atau sesi telah berakhir';
-                    } else if (statusCode === 404) {
-                        errorMsg = 'Endpoint tidak ditemukan. Coba periksa route API.';
-                    } else if (statusCode === 500) {
-                        errorMsg = 'Terjadi kesalahan pada server';
-                    }
-                    
-                    setError(errorMsg);
-                } else if (err.request) {
-                    console.error('Request yang dikirim:', err.request);
-                    setError('Tidak dapat terhubung ke server. Periksa koneksi internet Anda.');
-                } else {
-                    setError('Gagal memuat data: ' + err.message);
-                }
+                handleError(err);
             } finally {
                 setLoading(false);
             }
@@ -149,25 +163,46 @@ export default function HistoryPage() {
 
     // Format waktu sesi
     const formatSessionTime = (booking) => {
-        if (booking?.jam_mulai && booking?.jam_selesai) {
-            return `${booking.jam_mulai} - ${booking.jam_selesai}`;
-        }
-        
-        // Jika ada sesi_data
-        if (booking?.sesi_data && booking.sesi_data.length > 0) {
-            // Jika hanya 1 sesi
-            if (booking.sesi_data.length === 1) {
-                const sesi = booking.sesi_data[0];
-                return `${sesi.jam_mulai} - ${sesi.jam_selesai}`;
+        try {
+            // Pastikan booking dan id_sesi ada
+            if (!booking || !booking.id_sesi) {
+                return 'Waktu tidak tersedia';
             }
-            
-            // Jika banyak sesi, tampilkan range
-            const jamMulai = booking.sesi_data[0]?.jam_mulai;
-            const jamSelesai = booking.sesi_data[booking.sesi_data.length - 1]?.jam_selesai;
-            return `${jamMulai} - ${jamSelesai}`;
+
+            // Parse id_sesi jika dalam bentuk string
+            const sesiIds = typeof booking.id_sesi === 'string' 
+                ? JSON.parse(booking.id_sesi) 
+                : booking.id_sesi;
+
+            // Pastikan sesiIds adalah array dan tidak kosong
+            if (!Array.isArray(sesiIds) || sesiIds.length === 0) {
+                return 'Waktu tidak tersedia';
+            }
+
+            // Urutkan ID sesi
+            const sortedSesiIds = [...sesiIds].sort((a, b) => a - b);
+
+            // Ambil data sesi dari state
+            const sesiList = sortedSesiIds.map(id => sesiData[id]).filter(Boolean);
+
+            if (sesiList.length === 0) {
+                return 'Waktu tidak tersedia';
+            }
+
+            // Urutkan sesi berdasarkan jam mulai
+            sesiList.sort((a, b) => a.jam_mulai.localeCompare(b.jam_mulai));
+
+            // Jika hanya ada 1 sesi
+            if (sesiList.length === 1) {
+                return `${sesiList[0].jam_mulai} - ${sesiList[0].jam_selesai}`;
+            }
+
+            // Jika ada multiple sesi, tampilkan range dari sesi pertama sampai terakhir
+            return `${sesiList[0].jam_mulai} - ${sesiList[sesiList.length - 1].jam_selesai}`;
+        } catch (error) {
+            console.error('Error formatting session time:', error);
+            return 'Waktu tidak tersedia';
         }
-        
-        return 'Waktu tidak tersedia';
     };
 
     const handleOpenDetail = (booking) => {
@@ -182,27 +217,50 @@ export default function HistoryPage() {
 
     const handlePayNow = async (booking) => {
         try {
-            const { token } = await bookingService.getPaymentToken(booking.id_pemesanan);
+            const response = await bookingService.getPaymentToken(booking.id_pemesanan);
+            const token = response.data.snap_token;
             
             window.snap.pay(token, {
                 onSuccess: async (result) => {
-                    await bookingService.checkPaymentStatus(booking.id_pemesanan);
-                    showSnackbar('Pembayaran berhasil', 'success');
+                    console.log('Payment success:', result);
+                    try {
+                        // Update status pembayaran dan booking
+                        await bookingService.updatePaymentStatus(booking.id_pemesanan, {
+                            status: 'diverifikasi',
+                            payment_status: 'diverifikasi',
+                            transaction_status: result.transaction_status,
+                            transaction_id: result.transaction_id,
+                            payment_type: result.payment_type,
+                            paid_at: new Date().toISOString()
+                        });
+
+                        setSuccess('Pembayaran berhasil! Status booking telah diperbarui.');
+                        // Refresh data booking
+                        fetchBookings();
+                    } catch (err) {
+                        console.error('Error updating payment status:', err);
+                        setError('Pembayaran berhasil tetapi gagal memperbarui status. Silakan hubungi admin.');
+                    }
+                },
+                onPending: async (result) => {
+                    console.log('Payment pending:', result);
+                    setSuccess('Pembayaran sedang diproses. Status booking akan diperbarui dalam beberapa saat.');
+                    // Tetap refresh data untuk mendapatkan status terbaru
                     fetchBookings();
                 },
-                onPending: (result) => {
-                    showSnackbar('Menunggu pembayaran', 'info');
-                },
                 onError: (result) => {
-                    showSnackbar('Pembayaran gagal', 'error');
+                    console.error('Payment error:', result);
+                    setError('Pembayaran gagal. Silakan coba lagi.');
                 },
                 onClose: () => {
-                    showSnackbar('Pembayaran dibatalkan', 'warning');
+                    console.log('Snap popup closed');
+                    // Refresh data untuk mendapatkan status terbaru
+                    fetchBookings();
                 }
             });
-        } catch (error) {
-            console.error('Error getting payment token:', error);
-            showSnackbar('Gagal memulai pembayaran', 'error');
+        } catch (err) {
+            console.error('Error getting payment token:', err);
+            setError('Gagal memulai pembayaran. Silakan coba lagi.');
         }
     };
 
@@ -249,6 +307,16 @@ export default function HistoryPage() {
                                         >
                                             Detail
                                         </Button>
+                                        {booking.status === 'diverifikasi' && !booking.pembayaran && (
+                                            <Button
+                                                variant="contained"
+                                                size="small"
+                                                onClick={() => handlePayNow(booking)}
+                                                sx={{ ml: 1 }}
+                                            >
+                                                Bayar
+                                            </Button>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             ))
@@ -345,6 +413,148 @@ export default function HistoryPage() {
                 </DialogActions>
             </Dialog>
         );
+    };
+
+    // Fungsi untuk mengkonversi booking ke payment format
+    const convertBookingToPayment = useCallback((booking) => {
+        console.log('Converting booking:', booking);
+        
+        // Hitung status pembayaran berdasarkan status booking dan pembayaran
+        let paymentStatus = 'pending';
+        let transactionStatus = 'pending';
+
+        // Ambil data pembayaran jika ada
+        const pembayaran = booking.pembayaran && booking.pembayaran.length > 0 ? booking.pembayaran[0] : null;
+
+        if (pembayaran) {
+            paymentStatus = pembayaran.status;
+            transactionStatus = pembayaran.transaction_status || 'pending';
+        }
+
+        // Update status berdasarkan status booking
+        if (booking.status === 'diverifikasi' || booking.status === 'selesai') {
+            paymentStatus = 'paid';
+            transactionStatus = 'settlement';
+        } else if (booking.status === 'ditolak' || booking.status === 'dibatalkan') {
+            paymentStatus = 'cancelled';
+            transactionStatus = 'cancel';
+        } else if (booking.status === 'expired') {
+            paymentStatus = 'expired';
+            transactionStatus = 'expire';
+        }
+
+        // Format waktu sesi
+        const sesi = booking.sesi || [];
+        sesi.sort((a, b) => a.jam_mulai.localeCompare(b.jam_mulai));
+        const waktuMulai = sesi.length > 0 ? sesi[0].jam_mulai : "-";
+        const waktuSelesai = sesi.length > 0 ? sesi[sesi.length - 1].jam_selesai : "-";
+
+        const converted = {
+            id: booking.id_pemesanan,
+            booking_id: booking.id_pemesanan,
+            amount: parseFloat(booking.total_harga),
+            status: paymentStatus,
+            transaction_status: transactionStatus,
+            booking_status: booking.status,
+            payment_type: pembayaran ? pembayaran.payment_type : 'midtrans',
+            snap_token: pembayaran ? pembayaran.snap_token : null,
+            transaction_id: pembayaran ? pembayaran.transaction_id : null,
+            date: booking.created_at,
+            due_date: booking.due_date || null,
+            field_name: booking.lapangan?.nama || 'Lapangan',
+            schedule: `${formatDate(booking.tanggal)} - ${waktuMulai} - ${waktuSelesai}`,
+            schedule_date: booking.tanggal,
+            schedule_time: `${waktuMulai} - ${waktuSelesai}`,
+            method: pembayaran ? pembayaran.metode || 'Midtrans Payment Gateway' : 'Midtrans Payment Gateway',
+            customer_name: booking.nama_pelanggan,
+            customer_email: booking.email,
+            customer_phone: booking.no_hp,
+            notes: booking.catatan || null,
+            sessions: sesi,
+            paid_at: pembayaran ? pembayaran.paid_at : null,
+            total_harga: booking.total_harga
+        };
+
+        console.log('Converted payment object:', converted);
+        return converted;
+    }, []);
+
+    // Fungsi untuk mengambil data pembayaran
+    const fetchPayments = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            // Ambil data booking untuk user yang sedang login
+            const response = await bookingService.getUserBookings();
+            console.log('Bookings response:', response);
+
+            let bookingsData = [];
+            if (response && response.data) {
+                if (Array.isArray(response.data)) {
+                    bookingsData = response.data;
+                } else if (response.data.data && Array.isArray(response.data.data)) {
+                    bookingsData = response.data.data;
+                }
+            }
+
+            console.log('User bookings before conversion:', bookingsData);
+
+            // Konversi booking ke format payment
+            const formattedPayments = bookingsData.map(booking => {
+                const converted = convertBookingToPayment(booking);
+                console.log('Converted booking:', converted);
+                return converted;
+            });
+
+            // Urutkan berdasarkan tanggal terbaru
+            formattedPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            console.log('Final formatted payments:', formattedPayments);
+            setPayments(formattedPayments);
+        } catch (err) {
+            console.error('Error fetching payments:', err);
+            setError('Gagal memuat data pembayaran. Silakan coba lagi.');
+            setPayments([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Effect untuk memuat data saat komponen pertama kali dimuat
+    useEffect(() => {
+        fetchPayments();
+    }, []);
+
+    // Handle error function
+    const handleError = (err) => {
+        if (err.response) {
+            const statusCode = err.response.status;
+            console.error('Response status:', statusCode);
+            console.error('Response headers:', err.response.headers);
+            console.error('Response data:', err.response.data);
+            
+            let errorMsg = `Error server (${statusCode})`;
+            
+            if (err.response.data && err.response.data.message) {
+                errorMsg = err.response.data.message;
+            }
+            
+            if (statusCode === 401) {
+                errorMsg = 'Anda belum login atau sesi telah berakhir';
+            } else if (statusCode === 404) {
+                errorMsg = 'Endpoint tidak ditemukan. Coba periksa route API.';
+            } else if (statusCode === 500) {
+                errorMsg = 'Terjadi kesalahan pada server';
+            }
+            
+            setError(errorMsg);
+        } else if (err.request) {
+            console.error('Request yang dikirim:', err.request);
+            setError('Tidak dapat terhubung ke server. Periksa koneksi internet Anda.');
+        } else {
+            setError('Gagal memuat data: ' + err.message);
+        }
     };
 
     return (
