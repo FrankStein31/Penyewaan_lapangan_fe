@@ -72,8 +72,9 @@ export default function Sidebar() {
                     width: drawerWidth,
                     boxSizing: 'border-box',
                     borderRight: '0px',
-                    boxShadow: '0px 0px 10px rgba(0, 0, 0, 0.1)',
-                    backgroundColor: 'white'
+                    boxShadow: '0px 0px 20px rgba(115, 103, 240, 0.3)',
+                    backgroundColor: '#1a1a2e',
+                    color: '#fff'
                 },
             }}
         >
@@ -85,21 +86,18 @@ export default function Sidebar() {
                             alt="SIGMA Logo"
                             width={120}
                             height={40}
-                            style={{ filter: 'invert(50%) sepia(98%) saturate(2000%) hue-rotate(228deg) brightness(70%) contrast(150%)' }}
+                            style={{ filter: 'brightness(0) invert(1)' }}
                         />
                     </Box>
                 </Toolbar>
-                <Divider />
 
                 <Box sx={{ p: 2, pl: 4, display: 'flex', alignItems: 'center' }}>
-                    <Avatar sx={{ bgcolor: theme => theme.palette.primary.main }}>A</Avatar>
+                    <Avatar sx={{ bgcolor: '#7367f0' }}>A</Avatar>
                     <Box sx={{ ml: 2 }}>
-                        <Typography variant="subtitle1" component="div" sx={{ fontWeight: 600 }}>Admin</Typography>
-                        <Typography variant="body2" component="div" color="textSecondary">Administrator</Typography>
+                        <Typography variant="subtitle1" component="div" sx={{ fontWeight: 600, color: '#fff' }}>Admin</Typography>
+                        <Typography variant="body2" component="div" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>Administrator</Typography>
                     </Box>
                 </Box>
-
-                <Divider />
 
                 <List sx={{ flex: 1, px: 2, py: 1 }}>
                     {menuItems.map((item) => (
@@ -109,16 +107,17 @@ export default function Sidebar() {
                                 href={item.path}
                                 sx={{
                                     borderRadius: '8px',
-                                    backgroundColor: pathname === item.path ? 'rgba(115, 103, 240, 0.1)' : 'transparent',
-                                    color: pathname === item.path ? 'primary.main' : 'inherit',
+                                    backgroundColor: pathname === item.path ? 'rgba(115, 103, 240, 0.2)' : 'transparent',
+                                    color: pathname === item.path ? '#7367f0' : 'rgba(255, 255, 255, 0.7)',
                                     '&:hover': {
-                                        backgroundColor: 'rgba(115, 103, 240, 0.05)',
+                                        backgroundColor: 'rgba(115, 103, 240, 0.1)',
+                                        color: '#7367f0'
                                     }
                                 }}
                             >
                                 <ListItemIcon
                                     sx={{
-                                        color: pathname === item.path ? 'primary.main' : 'inherit',
+                                        color: pathname === item.path ? '#7367f0' : 'rgba(255, 255, 255, 0.7)',
                                         minWidth: '40px'
                                     }}
                                 >
@@ -136,19 +135,21 @@ export default function Sidebar() {
                     ))}
                 </List>
 
-                <Divider />
+                <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.1)' }} />
                 <List sx={{ px: 2, py: 1 }}>
                     <ListItem disablePadding sx={{ mb: 1 }}>
                         <ListItemButton
                             onClick={handleLogout}
                             sx={{
                                 borderRadius: '8px',
+                                color: 'rgba(255, 255, 255, 0.7)',
                                 '&:hover': {
-                                    backgroundColor: 'rgba(115, 103, 240, 0.05)',
+                                    backgroundColor: 'rgba(115, 103, 240, 0.1)',
+                                    color: '#7367f0'
                                 }
                             }}
                         >
-                            <ListItemIcon sx={{ minWidth: '40px' }}>
+                            <ListItemIcon sx={{ minWidth: '40px', color: 'inherit' }}>
                                 <LogoutIcon />
                             </ListItemIcon>
                             <ListItemText
